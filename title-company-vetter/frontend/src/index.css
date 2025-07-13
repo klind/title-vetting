@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles */
+@layer base {
+  html {
+    @apply h-full;
+  }
+  
+  body {
+    @apply h-full bg-gray-50 text-gray-900 font-sans;
+  }
+  
+  #root {
+    @apply h-full;
+  }
+}
+
+/* Custom component styles */
+@layer components {
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+  
+  .btn-secondary {
+    @apply bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+  
+  .input-field {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200;
+  }
+  
+  .input-field-error {
+    @apply border-error-500 focus:ring-error-500 focus:border-error-500;
+  }
+  
+  .card {
+    @apply bg-white shadow-sm border border-gray-200 rounded-lg p-6;
+  }
+  
+  .alert-error {
+    @apply bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-md;
+  }
+  
+  .alert-warning {
+    @apply bg-warning-50 border border-warning-200 text-warning-700 px-4 py-3 rounded-md;
+  }
+  
+  .alert-success {
+    @apply bg-success-50 border border-success-200 text-success-700 px-4 py-3 rounded-md;
+  }
+  
+  .alert-info {
+    @apply bg-primary-50 border border-primary-200 text-primary-700 px-4 py-3 rounded-md;
+  }
+  
+  .loading-spinner {
+    @apply animate-spin rounded-full border-2 border-gray-300 border-t-primary-600;
+  }
+  
+  .loading-pulse {
+    @apply animate-pulse-slow bg-gray-200 rounded;
+  }
+}
+
+/* Custom utility styles */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

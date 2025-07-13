@@ -1,0 +1,324 @@
+/**
+ * Frontend types for the Title Company Vetter application
+ * These types mirror the backend API responses but are optimized for UI consumption
+ */
+
+/**
+ * WHOIS report structure as returned by the API
+ */
+export interface WhoisReport {
+  domain: string;
+  registrant: {
+    name?: string;
+    organization?: string;
+    email?: string;
+    country?: string;
+    phone?: string;
+  };
+  registration: {
+    createdDate?: string;
+    expirationDate?: string;
+    registrar?: string;
+    registrarWhoisServer?: string;
+  };
+  technical: {
+    nameServers?: string[];
+    status?: string;
+    dnssec?: string;
+  };
+  admin: {
+    name?: string;
+    email?: string;
+  };
+  tech: {
+    name?: string;
+    email?: string;
+  };
+  riskFactors: string[];
+  metadata: {
+    lookupTime: number;
+    source: string;
+    timestamp: string;
+  };
+}
+
+/**
+ * API response wrapper
+ */
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  timestamp: string;
+  requestId?: string;
+}
+
+/**
+ * API request for WHOIS lookup
+ */
+export interface WhoisRequest {
+  url: string;
+}
+
+/**
+ * Loading states for async operations
+ */
+export interface ApiState<T = any> {
+  loading: boolean;
+  error: string | null;
+  data: T | null;
+}
+
+/**
+ * Form validation errors
+ */
+export interface ValidationError {
+  field: string;
+  message: string;
+}
+
+/**
+ * URL validation result
+ */
+export interface UrlValidation {
+  isValid: boolean;
+  error?: string;
+}
+
+/**
+ * Risk level enum for better type safety
+ */
+export enum RiskLevel {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+  CRITICAL = 'critical',
+}
+
+/**
+ * Risk assessment for display purposes
+ */
+export interface RiskAssessment {
+  level: RiskLevel;
+  score: number; // 0-100
+  factors: string[];
+  recommendations: string[];
+}
+
+/**
+ * Processing status for multi-step operations
+ */
+export enum ProcessingStatus {
+  IDLE = 'idle',
+  VALIDATING = 'validating',
+  FETCHING = 'fetching',
+  PROCESSING = 'processing',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+}
+
+/**
+ * Extended state for the WHOIS lookup process
+ */
+export interface WhoisLookupState extends ApiState<WhoisReport> {
+  status: ProcessingStatus;
+  progress?: number; // 0-100
+  currentStep?: string;
+  validationErrors: ValidationError[];
+  riskAssessment?: RiskAssessment;
+}
+
+/**
+ * Configuration for the API client
+ */
+export interface ApiConfig {
+  baseUrl: string;
+  timeout: number;
+  retries: number;
+  retryDelay: number;
+}
+
+/**
+ * HTTP methods supported by the API
+ */
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+
+/**
+ * Request options for API calls
+ */
+export interface RequestOptions {
+  method?: HttpMethod;
+  headers?: Record<string, string>;
+  body?: any;
+  timeout?: number;
+  retries?: number;
+}
+
+/**
+ * Theme configuration
+ */
+export interface Theme {
+  mode: 'light' | 'dark';
+  primaryColor: string;
+  accentColor: string;
+}
+
+/**
+ * User preferences
+ */
+export interface UserPreferences {
+  theme: Theme;
+  autoRefresh: boolean;
+  notifications: boolean;
+  maxHistoryItems: number;
+}
+
+/**
+ * Lookup history item
+ */
+export interface HistoryItem {
+  id: string;
+  url: string;
+  domain: string;
+  timestamp: string;
+  riskLevel: RiskLevel;
+  success: boolean;
+  errorMessage?: string;
+}
+
+/**
+ * Application state
+ */
+export interface AppState {
+  currentLookup: WhoisLookupState;
+  history: HistoryItem[];
+  preferences: UserPreferences;
+  isOnline: boolean;
+}
+
+/**
+ * Error types for better error handling
+ */
+export enum ErrorType {
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  API_ERROR = 'API_ERROR',
+  TIMEOUT_ERROR = 'TIMEOUT_ERROR',
+  RATE_LIMIT_ERROR = 'RATE_LIMIT_ERROR',
+  UNKNOWN_ERROR = 'UNKNOWN_ERROR',
+}
+
+/**
+ * Structured error object
+ */
+export interface AppError {
+  type: ErrorType;
+  message: string;
+  details?: any;
+  timestamp: string;
+  retryable: boolean;
+}
+
+/**
+ * Notification object
+ */
+export interface Notification {
+  id: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  title: string;
+  message: string;
+  timestamp: string;
+  duration?: number; // auto-dismiss after ms
+  actions?: Array<{
+    label: string;
+    action: () => void;
+  }>;
+}
+
+/**
+ * Component props interfaces
+ */
+export interface BaseComponentProps {
+  className?: string;
+  children?: React.ReactNode;
+}
+
+export interface LoadingProps extends BaseComponentProps {
+  size?: 'sm' | 'md' | 'lg';
+  color?: string;
+  text?: string;
+}
+
+export interface ErrorDisplayProps extends BaseComponentProps {
+  error: string | AppError;
+  onRetry?: () => void;
+  onDismiss?: () => void;
+}
+
+export interface CardProps extends BaseComponentProps {
+  title?: string;
+  subtitle?: string;
+  actions?: React.ReactNode;
+  variant?: 'default' | 'outlined' | 'elevated';
+}
+
+/**
+ * Form-related types
+ */
+export interface FormField {
+  name: string;
+  label: string;
+  type: 'text' | 'email' | 'url' | 'tel' | 'password';
+  placeholder?: string;
+  required?: boolean;
+  pattern?: string;
+  minLength?: number;
+  maxLength?: number;
+}
+
+export interface FormState {
+  values: Record<string, any>;
+  errors: Record<string, string>;
+  touched: Record<string, boolean>;
+  isSubmitting: boolean;
+  isValid: boolean;
+}
+
+/**
+ * Utility types
+ */
+export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
+export type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
+
+/**
+ * Event handler types
+ */
+export type EventHandler<T = any> = (event: T) => void;
+export type AsyncEventHandler<T = any> = (event: T) => Promise<void>;
+export type ChangeHandler<T = any> = (value: T) => void;
+
+/**
+ * Hook return types
+ */
+export interface UseApiHookReturn<T> extends ApiState<T> {
+  execute: (params?: any) => Promise<void>;
+  reset: () => void;
+  abort: () => void;
+}
+
+export interface UseFormHookReturn<T> {
+  values: T;
+  errors: Record<keyof T, string>;
+  touched: Record<keyof T, boolean>;
+  isSubmitting: boolean;
+  isValid: boolean;
+  handleChange: (field: keyof T) => ChangeHandler;
+  handleBlur: (field: keyof T) => EventHandler;
+  handleSubmit: (onSubmit: (values: T) => Promise<void>) => EventHandler;
+  reset: () => void;
+  setFieldValue: (field: keyof T, value: any) => void;
+  setFieldError: (field: keyof T, error: string) => void;
+}
