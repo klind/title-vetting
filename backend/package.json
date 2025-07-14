@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "build:production": "tsc && npx playwright install --with-deps chromium",
     "start": "node dist/server/server.js",
     "type-check": "tsc --noEmit",
     "test": "vitest",
@@ -15,7 +16,8 @@
     "test:coverage": "vitest run --coverage",
     "dev": "tsx src/server/dev-server.ts",
     "lint": "eslint src/ --ext .ts",
-    "lint:fix": "eslint src/ --ext .ts --fix"
+    "lint:fix": "eslint src/ --ext .ts --fix",
+    "playwright:install": "npx playwright install --with-deps chromium"
   },
   "dependencies": {
     "@types/swagger-jsdoc": "^6.0.4",
