@@ -1,14 +1,14 @@
 import { 
-  WhoisResult, 
   WhoisReport, 
-  WhoisResultSchema, 
+  assessRiskFactors 
+} from '../../types/whois.js';
+import { 
   ErrorType, 
   ApiError,
-  RateLimitState,
-  assessRiskFactors 
-} from './types.js';
-import { validateUrl, extractDomain } from './url-validator.js';
-import { validateWebsiteComprehensive } from './website-validator.js';
+  RateLimitState
+} from '../../types/common.js';
+import { validateUrl, extractDomain } from '../website/url-validator.js';
+import { validateWebsiteComprehensive } from '../website/website-validator.js';
 import { customWhoisLookup } from './custom-whois.js';
 
 /**
@@ -75,9 +75,8 @@ export async function performWhoisLookup(
     console.log(`Performing WHOIS lookup for domain: ${domain}`);
     const rawWhoisData = await performRawWhoisLookup(domain);
 
-    // Validate and transform the data
-    const validatedData = validateWhoisData(rawWhoisData);
-    const transformedReport = await transformWhoisData(domain, validatedData, startTime);
+    // Transform the data directly without validation
+    const transformedReport = await transformWhoisData(domain, rawWhoisData, startTime);
 
     // Cache disabled - don't store results
     // setCachedResult(domain, transformedReport);
@@ -175,194 +174,214 @@ async function performRawWhoisLookup(domain: string): Promise<any> {
 }
 
 /**
- * Validates raw WHOIS data using Zod schema
+ * Merges WHOIS data from all servers with registry priority, removing only obvious duplicates
  * 
- * @param rawData - Raw WHOIS data
- * @returns Validated WHOIS data
+ * @param rawData - Raw WHOIS data from all servers
+ * @returns Merged data object with registry priority
  */
-function validateWhoisData(rawData: any): WhoisResult {
-  try {
-    // Parse with Zod schema (allows partial data)
-    const result = WhoisResultSchema.parse(rawData);
-    return result;
-  } catch (error) {
-    console.warn('WHOIS data validation failed, using raw data:', error);
+function deduplicateFields(rawData: any): Record<string, any> {
+  const result: Record<string, any> = {};
+  
+  // Get data from each server (if available)
+  const ianaData = rawData.iana || {};
+  const registryData = rawData.registry || {};
+  const registrarData = rawData.registrar || {};
+  
+  // Start with iana data (lowest priority)
+  Object.entries(ianaData).forEach(([key, value]) => {
+    result[key] = value;
+  });
+  
+  // Add registrar data (medium priority) - overwrites iana if same key
+  Object.entries(registrarData).forEach(([key, value]) => {
+    result[key] = value;
+  });
+  
+  // Add registry data (highest priority) - overwrites both iana and registrar if same key
+  Object.entries(registryData).forEach(([key, value]) => {
+    result[key] = value;
+  });
+  
+  // Now remove obvious duplicates (same field name but different case/format)
+  const keysToRemove = new Set<string>();
+  const processedNormalizedKeys = new Set<string>();
+  
+  Object.keys(result).forEach(key => {
+    const normalizedKey = normalizeFieldName(key);
     
-    // If validation fails, return a minimal valid structure with raw data
-    // Map the parsed WHOIS fields to the expected structure
-    return {
-      domainName: rawData?.domainName || rawData?.domain || undefined,
-      registrantName: rawData?.registrantName || undefined,
-      registrantOrganization: rawData?.registrantOrganization || undefined,
-      registrantEmail: rawData?.registrantEmail || undefined,
-      registrantCountry: rawData?.registrantCountry || undefined,
-      registrantPhone: rawData?.registrantPhone || undefined,
-      registrantPhoneExt: rawData?.registrantPhoneExt || undefined,
-      registrantFax: rawData?.registrantFax || undefined,
-      registrantFaxExt: rawData?.registrantFaxExt || undefined,
-      registrantStreet: rawData?.registrantStreet || undefined,
-      registrantCity: rawData?.registrantCity || undefined,
-      registrantState: rawData?.registrantState || rawData?.registrantstateprovince || undefined,
-      registrantPostalCode: rawData?.registrantpostalcode || undefined,
+    if (processedNormalizedKeys.has(normalizedKey)) {
+      // This is a duplicate, check if we should keep this version or the previous one
+      const existingKey = Object.keys(result).find(k => 
+        normalizeFieldName(k) === normalizedKey && !keysToRemove.has(k)
+      );
       
-      // Admin contact
-      adminName: rawData?.adminName || undefined,
-      adminOrganization: rawData?.adminOrganization || undefined,
-      adminEmail: rawData?.adminEmail || undefined,
-      adminPhone: rawData?.adminPhone || undefined,
-      adminPhoneExt: rawData?.adminPhoneExt || undefined,
-      adminFax: rawData?.adminFax || undefined,
-      adminFaxExt: rawData?.adminFaxExt || undefined,
-      adminStreet: rawData?.adminStreet || undefined,
-      adminCity: rawData?.adminCity || undefined,
-      adminState: rawData?.adminState || undefined,
-      adminPostalCode: rawData?.adminPostalCode || undefined,
-      adminCountry: rawData?.adminCountry || undefined,
-      
-      // Tech contact
-      techName: rawData?.techName || rawData?.techname || undefined,
-      techOrganization: rawData?.techOrganization || rawData?.techorganization || undefined,
-      techEmail: rawData?.techEmail || rawData?.techemail || undefined,
-      techPhone: rawData?.techPhone || rawData?.techphone || undefined,
-      techPhoneExt: rawData?.techPhoneExt || undefined,
-      techFax: rawData?.techFax || undefined,
-      techFaxExt: rawData?.techFaxExt || undefined,
-      techStreet: rawData?.techStreet || rawData?.techstreet || undefined,
-      techCity: rawData?.techCity || rawData?.techcity || undefined,
-      techState: rawData?.techState || rawData?.techstateprovince || undefined,
-      techPostalCode: rawData?.techPostalCode || rawData?.techpostalcode || undefined,
-      techCountry: rawData?.techCountry || rawData?.techcountry || undefined,
-      
-      // Registration details
-      creationDate: rawData?.creationDate || undefined,
-      expirationDate: rawData?.expirationDate || rawData?.registrarregistrationexpirationdate || undefined,
-      updatedDate: rawData?.updatedDate || undefined,
-      registrar: rawData?.registrar || undefined,
-      registrarWhoisServer: rawData?.registrarWhoisServer || undefined,
-      registrarUrl: rawData?.registrarUrl || rawData?.registrarurl || undefined,
-      registrarIanaId: rawData?.registrarIanaId || rawData?.registrarianaid || undefined,
-      registrarAbuseContactEmail: rawData?.registrarAbuseContactEmail || rawData?.registrarabusecontactemail || undefined,
-      registrarAbuseContactPhone: rawData?.registrarAbuseContactPhone || rawData?.registrarabusecontactphone || undefined,
-      
-      // Technical details
-      nameServers: rawData?.nameServers || rawData?.nameserver || undefined,
-      status: rawData?.status || rawData?.domainstatus || undefined,
-      dnssec: rawData?.dnssec || undefined,
-      
-      rawWhoisData: rawData, // Include raw data for reference
-    };
-  }
+      if (existingKey) {
+        // Keep the version with better formatting
+        const keyScore = getKeyScore(key);
+        const existingKeyScore = getKeyScore(existingKey);
+        
+        if (keyScore > existingKeyScore) {
+          // Keep this key, remove the existing one
+          keysToRemove.add(existingKey);
+        } else {
+          // Keep the existing key, remove this one
+          keysToRemove.add(key);
+        }
+      }
+    } else {
+      processedNormalizedKeys.add(normalizedKey);
+    }
+  });
+  
+  // Remove the duplicate keys
+  keysToRemove.forEach(key => {
+    delete result[key];
+  });
+  
+  return result;
 }
 
 /**
- * Transforms validated WHOIS data into our structured report format
+ * Normalizes field names for comparison
+ */
+function normalizeFieldName(key: string): string {
+  return key.toLowerCase()
+    .replace(/\s+/g, '') // Remove spaces
+    .replace(/[:\-_]/g, ''); // Remove common separators
+}
+
+/**
+ * Scores a field name for quality (higher is better)
+ */
+function getKeyScore(key: string): number {
+  let score = 0;
+  
+  // Prefer keys with proper capitalization
+  if (/[A-Z]/.test(key)) score += 2;
+  
+  // Prefer keys with spaces
+  if (key.includes(' ')) score += 2;
+  
+  // Penalize all lowercase keys
+  if (key === key.toLowerCase()) score -= 1;
+  
+  // Prefer shorter, cleaner keys
+  if (key.length < 50) score += 1;
+  
+  return score;
+}
+
+
+/**
+ * Transforms raw WHOIS data into our structured report format
  * 
  * @param domain - The domain that was looked up
- * @param whoisData - Validated WHOIS data
+ * @param rawWhoisData - Raw WHOIS data from the lookup
  * @param startTime - Lookup start timestamp
  * @returns Structured WHOIS report
  */
 async function transformWhoisData(
   domain: string, 
-  whoisData: WhoisResult, 
+  rawWhoisData: any, 
   startTime: number
 ): Promise<WhoisReport> {
-  // Temporarily disable website validation to isolate the issue
-  let websiteValidation = {
-    hasWebsite: false,
-    isAccessible: false,
-    hasDns: false,
-    error: 'Website validation temporarily disabled'
-  };
+  // Perform website validation with expanded data
+  let websiteValidation = await validateWebsiteComprehensive(domain, {
+    timeout: 10000,
+    followRedirects: true,
+    followContactPages: true,
+    checkSocialMedia: true
+  }).catch((error) => {
+    console.warn(`Website validation failed: ${error.message}`);
+    return {
+      hasWebsite: false,
+      isAccessible: false,
+      hasDns: false,
+      error: `Website validation failed: ${error.message}`
+    };
+  });
 
-  // Assess risk factors
-  const riskFactors = assessRiskFactors(whoisData);
+  // If rawWhoisData contains the enhanced multi-step lookup data, process it
+  if (rawWhoisData.ianaResponse || rawWhoisData.registryResponse || rawWhoisData.registrarResponse) {
+    // This is the enhanced data structure from customWhoisLookup
+    const enhancedData = rawWhoisData;
+    
+    // Remove unwanted fields from rawData before deduplication
+    const unwantedFields = [
+      'TERMS OF USE',
+      'termsofuse',
+      'URL of the ICANN Whois Inaccuracy Complaint Form',
+      'urloftheicannwhoisinaccuracycomplaintform',
+      'NOTICE',
+      'notice',
+      'URL of the ICANN WHOIS Data Problem Reporting System',
+      'urloftheicannwhoisdataproblemreportingsystem',
+      'comment_0',
+      'comment_1',
+      '% for more information on IANA, visit http',
+      'formoreinformationonianavisithttp',
+      'formoreinformationonwhoisstatuscodespleasevisithttps',
+      '% Error',
+      'error',
+      '>>> Last update of WHOIS database',
+      'formoreinformationonwhoisstatuscodespleasevisithttps',
+      'by the following terms of use',
+      'bythefollowingtermsofuse',
+      'to',
+      '(1) allow, enable, or otherwise support the transmission of mass',
+      'For more information on Whois status codes, please visit https',
+      'lastupdateofwhoisdatabase',
+    
+    ];
+    
+    // Clean rawData by removing unwanted fields from each server
+    const cleanedRawData = { ...enhancedData.rawData };
+    Object.keys(cleanedRawData).forEach(serverKey => {
+      const serverData = { ...cleanedRawData[serverKey] };
+      unwantedFields.forEach(field => {
+        delete serverData[field];
+      });
+      cleanedRawData[serverKey] = serverData;
+    });
+    
+    // Deduplicate fields with registry priority
+    const deduplicatedData = deduplicateFields(cleanedRawData);
+    
+    // Assess risk factors based on available data
+    const riskFactors = [];
+    if (!deduplicatedData['Registrant Name'] && !deduplicatedData['registrantName']) {
+      riskFactors.push('No public contact information available');
+    }
+    
+    // Create result with separate sections
+    const result = {
+      whois: {
+        domain: enhancedData.domain,
+        tld: enhancedData.tld,
+        ianaServer: enhancedData.ianaServer,
+        registryServer: enhancedData.registryServer,
+        registrarServer: enhancedData.registrarServer,
+        parsedData: deduplicatedData,
+        rawData: cleanedRawData,
+        metadata: {
+          lookupTime: Date.now() - startTime,
+          source: 'custom-whois-enhanced',
+          timestamp: new Date().toISOString(),
+          serversQueried: enhancedData.metadata?.serversQueried || [],
+          errors: enhancedData.metadata?.errors || [],
+          warnings: enhancedData.metadata?.warnings || [],
+          totalFields: Object.keys(deduplicatedData).length,
+        }
+      },
+      website: websiteValidation,
+      riskFactors: riskFactors
+    };
+    
+    return result as any;
+  }
 
-  const report: WhoisReport = {
-    domain,
-    
-    // Return the raw WHOIS data as the main data structure
-    registrant: {
-      name: whoisData.registrantName,
-      organization: whoisData.registrantOrganization,
-      email: whoisData.registrantEmail,
-      country: whoisData.registrantCountry,
-      phone: whoisData.registrantPhone,
-      phoneExt: whoisData.registrantPhoneExt,
-      fax: whoisData.registrantFax,
-      faxExt: whoisData.registrantFaxExt,
-      street: whoisData.registrantStreet || whoisData.registrantstreet,
-      city: whoisData.registrantCity || whoisData.registrantcity,
-      state: whoisData.registrantState || whoisData.registrantstateprovince,
-      postalCode: whoisData.registrantPostalCode || whoisData.registrantpostalcode,
-    },
-    
-    admin: {
-      name: whoisData.adminName,
-      organization: whoisData.adminOrganization,
-      email: whoisData.adminEmail,
-      phone: whoisData.adminPhone,
-      phoneExt: whoisData.adminPhoneExt,
-      fax: whoisData.adminFax,
-      faxExt: whoisData.adminFaxExt,
-      street: whoisData.adminStreet,
-      city: whoisData.adminCity,
-      state: whoisData.adminState,
-      postalCode: whoisData.adminPostalCode,
-      country: whoisData.adminCountry,
-    },
-    
-    tech: {
-      name: whoisData.techName || whoisData.techname,
-      organization: whoisData.techOrganization || whoisData.techorganization,
-      email: whoisData.techEmail || whoisData.techemail,
-      phone: whoisData.techPhone || whoisData.techphone,
-      phoneExt: whoisData.techPhoneExt,
-      fax: whoisData.techFax,
-      faxExt: whoisData.techFaxExt,
-      street: whoisData.techStreet || whoisData.techstreet,
-      city: whoisData.techCity || whoisData.techcity,
-      state: whoisData.techState || whoisData.techstateprovince,
-      postalCode: whoisData.techPostalCode || whoisData.techpostalcode,
-      country: whoisData.techCountry || whoisData.techcountry,
-    },
-    
-    registration: {
-      createdDate: whoisData.creationDate,
-      expirationDate: whoisData.expirationDate || whoisData.registrarregistrationexpirationdate,
-      updatedDate: whoisData.updatedDate,
-      registrar: whoisData.registrar,
-      registrarWhoisServer: whoisData.registrarWhoisServer,
-      registrarUrl: whoisData.registrarUrl || whoisData.registrarurl,
-      registrarIanaId: whoisData.registrarIanaId || whoisData.registrarianaid,
-      registrarAbuseContactEmail: whoisData.registrarAbuseContactEmail || whoisData.registrarabusecontactemail,
-      registrarAbuseContactPhone: whoisData.registrarAbuseContactPhone || whoisData.registrarabusecontactphone,
-    },
-    
-    technical: {
-      nameServers: whoisData.nameServers 
-        ? whoisData.nameServers.split(/[\s,]+/).filter(ns => ns.length > 0)
-        : whoisData.nameserver
-          ? [whoisData.nameserver].flat().filter(ns => ns.length > 0)
-          : undefined,
-      status: whoisData.status || whoisData.domainstatus,
-      dnssec: whoisData.dnssec,
-    },
-    
-    website: websiteValidation,
-    riskFactors,
-    
-    // Include the complete raw WHOIS data
-    rawWhoisData: whoisData,
-    
-    metadata: {
-      lookupTime: Date.now() - startTime,
-      source: 'custom-whois',
-      timestamp: new Date().toISOString(),
-    },
-  };
-
-  return report;
+  // Fallback for unexpected data structure
+  throw new Error('Unexpected WHOIS data structure - expected enhanced data from customWhoisLookup');
 }
 
 /**

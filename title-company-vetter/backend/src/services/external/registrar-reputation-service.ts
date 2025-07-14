@@ -5,7 +5,7 @@
  * to help identify potentially risky or unreliable registrars.
  */
 
-import { ErrorType, ApiError } from './types.js';
+import { ErrorType, ApiError } from '../../types/common.js';
 
 /**
  * Registrar reputation data interface

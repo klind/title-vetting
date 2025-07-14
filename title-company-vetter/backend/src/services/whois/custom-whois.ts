@@ -5,7 +5,7 @@
  * and support for various WHOIS server formats.
  */
 
-import { ErrorType, ApiError } from './types.js';
+import { ErrorType, ApiError } from '../../types/common.js';
 
 /**
  * WHOIS server configuration
@@ -572,51 +572,156 @@ export async function customWhoisLookup(
       );
     }
 
-    // Get WHOIS server configuration
-    const serverConfig = getWhoisServerConfig(tld);
-    if (!serverConfig) {
-      throw createApiError(
-        ErrorType.WHOIS_LOOKUP_ERROR,
-        `No WHOIS server found for TLD: ${tld}`,
-        404
-      );
+    const lookupResults = {
+      domain,
+      tld,
+      ianaServer: 'whois.iana.org',
+      registryServer: null as string | null,
+      registrarServer: null as string | null,
+      ianaResponse: null as string | null,
+      registryResponse: null as string | null,
+      registrarResponse: null as string | null,
+      parsedData: {} as Record<string, any>,
+      rawData: {} as Record<string, any>,
+      metadata: {
+        lookupTime: Date.now(),
+        serversQueried: [] as string[],
+        errors: [] as string[],
+        warnings: [] as string[],
+        totalFields: 0
+      }
+    };
+
+    // Step 1: Query IANA WHOIS server for TLD information
+    console.log(`[WHOIS] Step 1: Querying IANA server for TLD: ${tld}`);
+    try {
+      const ianaResponse = await performWhoisQuery(tld, {
+        server: 'whois.iana.org',
+        query: 'domain {domain}',
+        timeout,
+        follow,
+      }, {
+        timeout,
+        follow,
+        verbose
+      }, false);
+
+      lookupResults.ianaResponse = ianaResponse;
+      lookupResults.metadata.serversQueried.push('whois.iana.org');
+
+      // Parse IANA response to get registry server
+      const ianaParseResult = parseWhoisResponse(ianaResponse, tld);
+      Object.assign(lookupResults.rawData, { iana: ianaParseResult.data });
+
+      // Extract registry WHOIS server from IANA response
+      const registryServer = extractRegistryWhoisServer(ianaResponse);
+      if (registryServer) {
+        lookupResults.registryServer = registryServer;
+        console.log(`[WHOIS] IANA referral: Registry server = ${registryServer}`);
+      }
+
+      if (ianaParseResult.errors.length > 0) {
+        lookupResults.metadata.errors.push(...ianaParseResult.errors);
+      }
+    } catch (err) {
+      console.warn(`[WHOIS] Failed to query IANA server:`, err);
+      lookupResults.metadata.warnings.push('Failed to query IANA server');
     }
 
-    // First lookup (registry)
-    const rawResponse = await performWhoisQuery(domain, serverConfig, {
-      timeout,
-      follow,
-      verbose
-    }, false);
+    // Step 2: Query registry WHOIS server (either from IANA or fallback)
+    let registryServer = lookupResults.registryServer;
+    if (!registryServer) {
+      // Fallback to our predefined server list
+      const serverConfig = getWhoisServerConfig(tld);
+      if (serverConfig) {
+        registryServer = serverConfig.server;
+        lookupResults.registryServer = registryServer;
+      }
+    }
 
-    // Check for Registrar WHOIS Server referral
-    const registrarWhoisServer = extractRegistrarWhoisServer(rawResponse);
-    let finalResponse = rawResponse;
-    if (registrarWhoisServer && registrarWhoisServer !== serverConfig.server) {
-      console.log(`[WHOIS] Referral found: Registrar WHOIS Server = ${registrarWhoisServer}`);
+    if (registryServer) {
+      console.log(`[WHOIS] Step 2: Querying registry server: ${registryServer}`);
       try {
-        finalResponse = await performWhoisQuery(domain, {
-          server: registrarWhoisServer,
-          query: serverConfig.query,
+        const registryResponse = await performWhoisQuery(domain, {
+          server: registryServer,
+          query: 'domain {domain}',
           timeout,
           follow,
         }, {
           timeout,
           follow,
           verbose
-        }, true); // registrar referral
-        console.log(`[WHOIS] Used referred registrar server: ${registrarWhoisServer}`);
+        }, false);
+
+        lookupResults.registryResponse = registryResponse;
+        lookupResults.metadata.serversQueried.push(registryServer);
+
+        // Parse registry response
+        if (parseResponse) {
+          const registryParseResult = parseWhoisResponse(registryResponse, domain);
+          Object.assign(lookupResults.rawData, { registry: registryParseResult.data });
+          
+          if (registryParseResult.errors.length > 0) {
+            lookupResults.metadata.errors.push(...registryParseResult.errors);
+          }
+        }
+
+        // Step 3: Check for Registrar WHOIS Server referral
+        const registrarWhoisServer = extractRegistrarWhoisServer(registryResponse);
+        if (registrarWhoisServer && registrarWhoisServer !== registryServer) {
+          console.log(`[WHOIS] Step 3: Registry referral found: Registrar WHOIS Server = ${registrarWhoisServer}`);
+          lookupResults.registrarServer = registrarWhoisServer;
+          
+          try {
+            console.log(`[WHOIS] Querying registrar server: ${registrarWhoisServer}`);
+            const registrarResponse = await performWhoisQuery(domain, {
+              server: registrarWhoisServer,
+              query: 'domain {domain}',
+              timeout,
+              follow,
+            }, {
+              timeout,
+              follow,
+              verbose
+            }, true); // registrar referral
+            
+            lookupResults.registrarResponse = registrarResponse;
+            lookupResults.metadata.serversQueried.push(registrarWhoisServer);
+            console.log(`[WHOIS] Used referred registrar server: ${registrarWhoisServer}`);
+
+            // Parse registrar response
+            if (parseResponse) {
+              const registrarParseResult = parseWhoisResponse(registrarResponse, domain);
+              Object.assign(lookupResults.rawData, { registrar: registrarParseResult.data });
+              
+              if (registrarParseResult.errors.length > 0) {
+                lookupResults.metadata.errors.push(...registrarParseResult.errors);
+              }
+            }
+          } catch (err) {
+            console.warn(`[WHOIS] Failed to query referred registrar server (${registrarWhoisServer}), using original response.`);
+            lookupResults.metadata.warnings.push(`Failed to query registrar server: ${registrarWhoisServer}`);
+          }
+        }
       } catch (err) {
-        console.warn(`[WHOIS] Failed to query referred registrar server (${registrarWhoisServer}), using original response.`);
+        console.warn(`[WHOIS] Failed to query registry server:`, err);
+        lookupResults.metadata.warnings.push(`Failed to query registry server: ${registryServer}`);
       }
+    } else {
+      lookupResults.metadata.errors.push(`No registry server found for TLD: ${tld}`);
     }
 
-    if (parseResponse) {
-      const parseResult = parseWhoisResponse(finalResponse, domain);
-      return parseResult.data; // Return just the parsed data, not the full result object
-    }
+    // Add lookup completion metadata
+    lookupResults.metadata.lookupTime = Date.now() - lookupResults.metadata.lookupTime;
+    lookupResults.metadata.totalFields = Object.values(lookupResults.rawData).reduce((total, serverData) => 
+      total + Object.keys(serverData as Record<string, any>).length, 0
+    );
 
-    return { raw: finalResponse };
+    console.log(`[WHOIS] Lookup completed for ${domain}`);
+    console.log(`[WHOIS] Total fields parsed: ${lookupResults.metadata.totalFields}`);
+    console.log(`[WHOIS] Servers queried: ${lookupResults.metadata.serversQueried.join(', ')}`);
+
+    return lookupResults;
 
   } catch (error) {
     console.error(`Custom WHOIS lookup failed for ${domain}:`, error);
@@ -740,21 +845,30 @@ function parseWhoisResponse(response: string, domain: string): WhoisParseResult 
   try {
     for (const line of lines) {
       const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('%') || trimmed.startsWith('#')) {
+      // Don't skip comments - they might contain important info
+      if (!trimmed) {
         continue;
       }
 
       const colonIndex = trimmed.indexOf(':');
-      if (colonIndex === -1) continue;
+      if (colonIndex === -1) {
+        // Handle lines without colons (like status codes)
+        if (trimmed.startsWith('%') || trimmed.startsWith('#')) {
+          // Store comments as metadata
+          const commentKey = `comment_${Object.keys(data).filter(k => k.startsWith('comment_')).length}`;
+          data[commentKey] = trimmed;
+        }
+        continue;
+      }
 
       const key = trimmed.substring(0, colonIndex).trim();
       const value = trimmed.substring(colonIndex + 1).trim();
 
       if (key && value) {
-        // Normalize key names
-        const normalizedKey = normalizeWhoisKey(key);
-        data[normalizedKey] = value;
-        console.log(`[WHOIS] Parsed: ${key} -> ${normalizedKey} = ${value}`);
+        // Store only the original key names for clean data
+        data[key] = value;
+        
+        console.log(`[WHOIS] Parsed: ${key} = ${value}`);
       }
     }
 
@@ -836,6 +950,15 @@ function createApiError(
 // Helper to extract Registrar WHOIS Server from raw response
 function extractRegistrarWhoisServer(response: string): string | null {
   const match = response.match(/Registrar WHOIS Server:\s*([\w\.-]+)/i);
+  if (match && match[1]) {
+    return match[1].trim();
+  }
+  return null;
+} 
+
+// Helper to extract Registry WHOIS Server from IANA response
+function extractRegistryWhoisServer(response: string): string | null {
+  const match = response.match(/whois:\s*([\w\.-]+)/i);
   if (match && match[1]) {
     return match[1].trim();
   }

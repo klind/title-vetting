@@ -12,27 +12,32 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "dev": "tsx src/dev-server.ts",
+    "dev": "tsx src/server/dev-server.ts",
     "lint": "eslint src/ --ext .ts",
     "lint:fix": "eslint src/ --ext .ts --fix"
   },
   "dependencies": {
-    "zod": "^3.25.67",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
     "dotenv": "^16.4.5",
-    "node-fetch": "^3.3.2",
     "jsdom": "^24.0.0",
-    "playwright": "^1.48.0"
+    "node-fetch": "^3.3.2",
+    "playwright": "^1.48.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-dist": "^5.26.2",
+    "swagger-ui-express": "^5.0.1",
+    "zod": "^3.25.67"
   },
   "devDependencies": {
-    "@types/aws-lambda": "^8.10.150", 
-    "@types/node": "^22.10.12",
+    "@types/aws-lambda": "^8.10.150",
     "@types/jsdom": "^21.1.6",
+    "@types/node": "^22.10.12",
     "@typescript-eslint/eslint-plugin": "^8.18.2",
     "@typescript-eslint/parser": "^8.18.2",
-    "eslint": "^8.57.1",
-    "typescript": "^5.8.3",
-    "vitest": "^3.2.4",
     "@vitest/coverage-v8": "^3.2.4",
-    "ts-node": "^10.9.2"
+    "eslint": "^8.57.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   }
 }

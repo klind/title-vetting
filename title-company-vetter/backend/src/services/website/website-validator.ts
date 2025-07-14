@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
-import { ContactExtractor } from './contact-extractor.js';
+import { ContactExtractor } from '../external/contact-extractor.js';
 import { SSLValidator } from './ssl-validator.js';
-import { SocialMediaValidator } from './social-media-validator.js';
+import { SocialMediaValidator } from '../social-media/social-media-validator.js';
 
 /**
  * Validates if a domain has a working website

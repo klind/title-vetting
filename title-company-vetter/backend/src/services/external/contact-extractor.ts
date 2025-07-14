@@ -9,28 +9,28 @@ export class ContactExtractor {
   static PHONE_EXTENDED_REGEX = /(\+?[0-9]{1,4}[-.\s]?\(?[0-9]{1,4}\)?[-.\s]?[0-9]{1,4}[-.\s]?[0-9]{1,4})/g;
   static ADDRESS_REGEX = /(\d+\s+[A-Za-z\s]+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Court|Ct|Place|Pl|Way|Terrace|Ter|Circle|Cir|Highway|Hwy|Parkway|Pkwy)[,\s]+[A-Za-z\s]+[,\s]+[A-Z]{2}\s+\d{5}(?:-\d{4})?)/gi;
 
-  // Contact page patterns to look for
+  // Contact page patterns to look for (more specific to avoid false positives)
   static CONTACT_PAGE_PATTERNS = [
-    /contact/i,
-    /about/i,
-    /reach-us/i,
-    /get-in-touch/i,
-    /locations/i,
-    /offices/i,
-    /phone/i,
-    /email/i,
-    /address/i,
-    /directions/i,
-    /find-us/i,
-    /visit-us/i,
-    /connect/i,
-    /support/i,
-    /help/i,
-    /info/i,
-    /inquiry/i,
-    /quote/i,
-    /consultation/i,
-    /appointment/i
+    /\/contact[\w-]*\/?$/i,           // /contact, /contact-us, /contacts
+    /\/about[\w-]*\/?$/i,             // /about, /about-us (but not /about-something-else)
+    /\/reach-us\/?$/i,
+    /\/get-in-touch\/?$/i,
+    /\/locations\/?$/i,               // /locations (but not /locations/specific-location)
+    /\/offices\/?$/i,
+    /\/phone\/?$/i,
+    /\/email\/?$/i,
+    /\/address\/?$/i,
+    /\/directions\/?$/i,
+    /\/find-us\/?$/i,
+    /\/visit-us\/?$/i,
+    /\/connect\/?$/i,
+    /\/support\/?$/i,                 // /support (but not /support/articles)
+    /\/help\/?$/i,                    // /help (but not /helpful-resources)
+    /\/contact-info\/?$/i,
+    /\/inquiry\/?$/i,
+    /\/quote\/?$/i,
+    /\/consultation\/?$/i,
+    /\/appointment\/?$/i
   ];
 
   /**
@@ -135,38 +135,41 @@ export class ContactExtractor {
         console.log(`⚠️ Could not fetch robots.txt: ${error instanceof Error ? error.message : error}`);
       }
 
-      // Try common sitemap locations
-      const commonSitemapPaths = [
-        '/sitemap.xml',
-        '/sitemap_index.xml',
-        '/sitemap/sitemap.xml',
-        '/sitemap1.xml',
-        '/sitemap_news.xml'
-      ];
-
-      for (const sitemapPath of commonSitemapPaths) {
+      // Try sitemap.xml in root directory only if not already found in robots.txt
+      const rootSitemapUrl = new URL('/sitemap.xml', baseUrl).href;
+      if (!contactPages.some(page => page.includes('sitemap.xml'))) {
         try {
-          const sitemapUrl = new URL(sitemapPath, baseUrl).href;
-          console.log(`🔍 Checking sitemap: ${sitemapUrl}`);
+          console.log(`🔍 Checking sitemap: ${rootSitemapUrl}`);
           
-          const sitemapPages = await this.parseSitemap(sitemapUrl, options);
+          const sitemapPages = await this.parseSitemap(rootSitemapUrl, options);
           contactPages.push(...sitemapPages);
           
           if (sitemapPages.length > 0) {
             console.log(`✅ Found ${sitemapPages.length} potential contact pages in sitemap`);
-            break; // Found a working sitemap, no need to check others
           }
         } catch (error) {
-          console.log(`⚠️ Could not fetch ${sitemapPath}: ${error instanceof Error ? error.message : error}`);
+          console.log(`⚠️ Could not fetch sitemap.xml: ${error instanceof Error ? error.message : error}`);
         }
+      } else {
+        console.log(`⏭️ Skipping direct sitemap check - already processed from robots.txt`);
       }
 
       // Remove duplicates and filter for contact pages
       const uniquePages = [...new Set(contactPages)];
       const filteredPages = uniquePages.filter(url => this.isContactPage(url));
       
-      console.log(`📞 Found ${filteredPages.length} contact pages out of ${uniquePages.length} total pages`);
-      return filteredPages;
+      // Prioritize pages with "contact" in the URL (most likely to have contact info)
+      const prioritizedPages = filteredPages.sort((a, b) => {
+        const aHasContact = a.toLowerCase().includes('contact');
+        const bHasContact = b.toLowerCase().includes('contact');
+        
+        if (aHasContact && !bHasContact) return -1; // a comes first
+        if (!aHasContact && bHasContact) return 1;  // b comes first
+        return 0; // maintain original order
+      });
+      
+      console.log(`📞 Found ${prioritizedPages.length} contact pages out of ${uniquePages.length} total pages`);
+      return prioritizedPages;
     } catch (error) {
       console.warn(`Failed to discover contact pages: ${error instanceof Error ? error.message : error}`);
       return [];
@@ -174,7 +177,7 @@ export class ContactExtractor {
   }
 
   /**
-   * Parses sitemap XML to extract URLs
+   * Parses sitemap XML to extract URLs, handling both regular sitemaps and sitemap indexes
    */
   static async parseSitemap(sitemapUrl: string, options: {
     timeout?: number;
@@ -197,15 +200,50 @@ export class ContactExtractor {
       const xmlText = await response.text();
       const urls: string[] = [];
 
-      // Simple XML parsing for URLs
-      const urlMatches = xmlText.match(/<loc[^>]*>([^<]+)<\/loc>/gi);
-      if (urlMatches) {
-        urlMatches.forEach(match => {
-          const urlMatch = match.match(/<loc[^>]*>([^<]+)<\/loc>/i);
-          if (urlMatch && urlMatch[1]) {
-            urls.push(urlMatch[1].trim());
+      // Check if this is a sitemap index (contains <sitemapindex> or <sitemap> tags)
+      if (xmlText.includes('<sitemapindex') || xmlText.includes('<sitemap>')) {
+        console.log(`📋 Found sitemap index at ${sitemapUrl}, parsing nested sitemaps...`);
+        
+        // Extract sitemap URLs from index (handle both regular and CDATA-wrapped URLs)
+        const sitemapMatches = xmlText.match(/<loc[^>]*>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/loc>/gi);
+        if (sitemapMatches) {
+          const sitemapUrls: string[] = [];
+          sitemapMatches.forEach(match => {
+            const urlMatch = match.match(/<loc[^>]*>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/loc>/i);
+            if (urlMatch && urlMatch[1]) {
+              const url = urlMatch[1].trim();
+              // Avoid infinite recursion - don't parse the same sitemap again
+              if (url !== sitemapUrl) {
+                sitemapUrls.push(url);
+              }
+            }
+          });
+
+          console.log(`🔍 Found ${sitemapUrls.length} nested sitemaps in index`);
+
+          // Parse each nested sitemap (limit to prevent infinite recursion)
+          for (const nestedSitemapUrl of sitemapUrls.slice(0, 10)) {
+            try {
+              console.log(`🔍 Parsing nested sitemap: ${nestedSitemapUrl}`);
+              const nestedUrls = await this.parseSitemap(nestedSitemapUrl, options);
+              console.log(`📄 Found ${nestedUrls.length} URLs in ${nestedSitemapUrl}`);
+              urls.push(...nestedUrls);
+            } catch (error) {
+              console.warn(`Failed to parse nested sitemap ${nestedSitemapUrl}: ${error instanceof Error ? error.message : error}`);
+            }
           }
-        });
+        }
+      } else {
+        // Regular sitemap - extract page URLs (handle both regular and CDATA-wrapped URLs)
+        const urlMatches = xmlText.match(/<loc[^>]*>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/loc>/gi);
+        if (urlMatches) {
+          urlMatches.forEach(match => {
+            const urlMatch = match.match(/<loc[^>]*>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/loc>/i);
+            if (urlMatch && urlMatch[1]) {
+              urls.push(urlMatch[1].trim());
+            }
+          });
+        }
       }
 
       return urls;
@@ -391,7 +429,7 @@ export class ContactExtractor {
           
           if (contactPages.length > 0) {
             console.log(`🔍 Found ${contactPages.length} contact pages, extracting additional contacts...`);
-            const additionalContacts = await this.extractFromMultiplePages(contactPages.slice(0, 3), { timeout, userAgent });
+            const additionalContacts = await this.extractFromMultiplePages(contactPages.slice(0, 5), { timeout, userAgent });
             
             // Merge contacts
             contacts.emails.push(...additionalContacts.emails);

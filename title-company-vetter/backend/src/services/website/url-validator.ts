@@ -1,4 +1,5 @@
-import { UrlValidationResult, ErrorType } from './types.js';
+import { UrlValidationResult } from '../../types/validation.js';
+import { ErrorType } from '../../types/common.js';
 
 /**
  * URL validation patterns and configurations
@@ -30,46 +31,52 @@ const SUSPICIOUS_TLDS = [
 ];
 
 /**
- * Validates URL format and extracts domain information
+ * Validates URL or domain format and extracts domain information
  * 
- * @param url - The URL to validate
+ * @param input - The URL or domain to validate
  * @returns Validation result with domain info or error
  */
-export function validateUrl(url: string): UrlValidationResult {
+export function validateUrl(input: string): UrlValidationResult {
   try {
     // Basic input validation
-    if (!url || typeof url !== 'string') {
+    if (!input || typeof input !== 'string') {
       return {
         isValid: false,
-        error: 'URL is required and must be a string',
+        error: 'URL or domain is required and must be a string',
       };
     }
 
     // Trim whitespace
-    const trimmedUrl = url.trim();
+    const trimmedInput = input.trim();
 
-    if (trimmedUrl.length === 0) {
+    if (trimmedInput.length === 0) {
       return {
         isValid: false,
-        error: 'URL cannot be empty',
+        error: 'URL or domain cannot be empty',
       };
     }
 
-    // Check URL format
-    if (!URL_REGEX.test(trimmedUrl)) {
+    let domain: string | null = null;
+    let isUrl = false;
+
+    // Check if it's a URL (starts with http:// or https://)
+    if (URL_REGEX.test(trimmedInput)) {
+      isUrl = true;
+      domain = extractDomain(trimmedInput);
+    } else if (DOMAIN_REGEX.test(trimmedInput)) {
+      // It's a domain name
+      domain = trimmedInput.toLowerCase();
+    } else {
       return {
         isValid: false,
-        error: 'Invalid URL format. Please provide a valid HTTP or HTTPS URL',
+        error: 'Invalid format. Please provide a valid URL (e.g., https://example.com) or domain name (e.g., example.com)',
       };
     }
 
-    // Extract domain
-    const domain = extractDomain(trimmedUrl);
-    
     if (!domain) {
       return {
         isValid: false,
-        error: 'Could not extract domain from URL',
+        error: 'Could not extract domain from input',
       };
     }
 
@@ -101,7 +108,7 @@ export function validateUrl(url: string): UrlValidationResult {
   } catch (error) {
     return {
       isValid: false,
-      error: `URL validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      error: `URL/domain validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
     };
   }
 }
