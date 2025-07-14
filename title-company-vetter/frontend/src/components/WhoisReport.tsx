@@ -1,5 +1,6 @@
 import React from 'react';
-import { WhoisReport as WhoisReportType, RiskLevel, RiskAssessment } from '../types/whois';
+import type { WhoisReport as WhoisReportType, RiskAssessment } from '../types/whois';
+import { RiskLevel } from '../types/whois';
 
 interface WhoisReportProps {
   report: WhoisReportType;
@@ -21,13 +22,13 @@ export function WhoisReport({
   const getRiskLevelClasses = (level: RiskLevel): string => {
     switch (level) {
       case RiskLevel.LOW:
-        return 'bg-success-100 text-success-800 border-success-200';
+        return 'bg-green-100 text-green-800 border-green-200';
       case RiskLevel.MEDIUM:
-        return 'bg-warning-100 text-warning-800 border-warning-200';
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case RiskLevel.HIGH:
-        return 'bg-error-100 text-error-800 border-error-200';
+        return 'bg-red-100 text-red-800 border-red-200';
       case RiskLevel.CRITICAL:
-        return 'bg-red-100 text-red-900 border-red-300';
+        return 'bg-red-200 text-red-900 border-red-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -106,6 +107,104 @@ export function WhoisReport({
     }
   };
 
+  /**
+   * Renders a field with label and value
+   */
+  const renderField = (label: string, value: any, options?: { 
+    isLink?: boolean; 
+    isMonospace?: boolean; 
+    isEmail?: boolean;
+    showExpiration?: boolean;
+  }) => {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+
+    const displayValue = Array.isArray(value) ? value.join(', ') : String(value);
+    
+    return (
+      <div>
+        <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</dt>
+        <dd className={`text-sm text-gray-900 ${options?.isMonospace ? 'font-mono' : ''} ${options?.isLink ? 'break-all' : ''}`}>
+          {options?.isLink ? (
+            <a href={displayValue} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:text-primary-700">
+              {displayValue}
+            </a>
+          ) : options?.isEmail ? (
+            <a href={`mailto:${displayValue}`} className="text-primary-600 hover:text-primary-700">
+              {displayValue}
+            </a>
+          ) : (
+            <>
+              <div>{displayValue}</div>
+              {options?.showExpiration && value && (
+                <div className="text-xs text-gray-500 mt-1">
+                  {getDaysUntilExpiration(value)}
+                </div>
+              )}
+            </>
+          )}
+        </dd>
+      </div>
+    );
+  };
+
+  /**
+   * Renders a section of fields
+   */
+  const renderSection = (title: string, data: any, fields: Array<{ key: string; label: string; options?: any }>) => {
+    const hasData = fields.some(field => data[field.key] !== undefined && data[field.key] !== null && data[field.key] !== '');
+    
+    if (!hasData) return null;
+
+    return (
+      <div className="space-y-3">
+        <h4 className="font-medium text-gray-700 border-b border-gray-200 pb-2">{title}</h4>
+        <div className="space-y-2">
+          {fields.map(field => renderField(field.label, data[field.key], field.options))}
+        </div>
+      </div>
+    );
+  };
+
+  /**
+   * Renders all fields from an object dynamically
+   */
+  const renderDynamicFields = (title: string, data: any, excludeKeys: string[] = []) => {
+    if (!data || typeof data !== 'object') return null;
+
+    const fields = Object.entries(data)
+      .filter(([key, value]) => 
+        !excludeKeys.includes(key) && 
+        value !== undefined && 
+        value !== null && 
+        value !== '' &&
+        typeof value !== 'object'
+      );
+
+    if (fields.length === 0) return null;
+
+    return (
+      <div className="space-y-3">
+        <h4 className="font-medium text-gray-700 border-b border-gray-200 pb-2">{title}</h4>
+        <div className="space-y-2">
+          {fields.map(([key, value]) => 
+            renderField(
+              key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
+              value,
+              {
+                isLink: key.toLowerCase().includes('url'),
+                isMonospace: key.toLowerCase().includes('id') || key.toLowerCase().includes('server'),
+                isEmail: key.toLowerCase().includes('email'),
+                showExpiration: key.toLowerCase().includes('expiration')
+              }
+            )
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className={`bg-white rounded-lg shadow-lg overflow-hidden ${className}`}>
       {/* Header */}
@@ -180,177 +279,59 @@ export function WhoisReport({
           </div>
         )}
 
-        {/* Registration Information */}
+        {/* Domain Information */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">Registration Information</h3>
-          
+          <h3 className="text-lg font-semibold text-gray-900">Domain Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Domain</dt>
-                <dd className="text-sm text-gray-900 font-mono">{report.domain}</dd>
-              </div>
-              
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Registrar</dt>
-                <dd className="text-sm text-gray-900">
-                  {report.registration.registrar || 'Not available'}
-                </dd>
-              </div>
-
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Created Date</dt>
-                <dd className="text-sm text-gray-900">
-                  {formatDate(report.registration.createdDate)}
-                </dd>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Expiration Date</dt>
-                <dd className="text-sm text-gray-900">
-                  <div>{formatDate(report.registration.expirationDate)}</div>
-                  {report.registration.expirationDate && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      {getDaysUntilExpiration(report.registration.expirationDate)}
-                    </div>
-                  )}
-                </dd>
-              </div>
-
-              <div>
-                <dt className="text-sm font-medium text-gray-500">WHOIS Server</dt>
-                <dd className="text-sm text-gray-900 font-mono break-all">
-                  {report.registration.registrarWhoisServer || 'Not available'}
-                </dd>
-              </div>
-
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Status</dt>
-                <dd className="text-sm text-gray-900">
-                  {report.technical.status || 'Not available'}
-                </dd>
-              </div>
-            </div>
+            {renderField('Domain', report.domain, { isMonospace: true })}
+            {renderField('Registry Domain ID', report.registryDomainId, { isMonospace: true })}
           </div>
         </div>
+
+        {/* Registration Information */}
+        {report.registration && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Registration Information</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {renderDynamicFields('Registration Details', report.registration, [])}
+            </div>
+          </div>
+        )}
 
         {/* Contact Information */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900">Contact Information</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Registrant */}
-            <div className="space-y-3">
-              <h4 className="font-medium text-gray-700">Registrant</h4>
-              <div className="space-y-2">
-                <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Name</dt>
-                  <dd className="text-sm text-gray-900">
-                    {report.registrant.name || 'Not available'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Organization</dt>
-                  <dd className="text-sm text-gray-900">
-                    {report.registrant.organization || 'Not available'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Email</dt>
-                  <dd className="text-sm text-gray-900 break-all">
-                    {report.registrant.email || 'Not available'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Country</dt>
-                  <dd className="text-sm text-gray-900">
-                    {report.registrant.country || 'Not available'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Phone</dt>
-                  <dd className="text-sm text-gray-900">
-                    {report.registrant.phone || 'Not available'}
-                  </dd>
-                </div>
-              </div>
-            </div>
-
-            {/* Administrative Contact */}
-            <div className="space-y-3">
-              <h4 className="font-medium text-gray-700">Administrative</h4>
-              <div className="space-y-2">
-                <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Name</dt>
-                  <dd className="text-sm text-gray-900">
-                    {report.admin.name || 'Not available'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Email</dt>
-                  <dd className="text-sm text-gray-900 break-all">
-                    {report.admin.email || 'Not available'}
-                  </dd>
-                </div>
-              </div>
-            </div>
-
-            {/* Technical Contact */}
-            <div className="space-y-3">
-              <h4 className="font-medium text-gray-700">Technical</h4>
-              <div className="space-y-2">
-                <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Name</dt>
-                  <dd className="text-sm text-gray-900">
-                    {report.tech.name || 'Not available'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Email</dt>
-                  <dd className="text-sm text-gray-900 break-all">
-                    {report.tech.email || 'Not available'}
-                  </dd>
-                </div>
-              </div>
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {renderDynamicFields('Registrant', report.registrant, [])}
+            {renderDynamicFields('Administrative', report.admin, [])}
+            {renderDynamicFields('Technical', report.tech, [])}
           </div>
         </div>
 
         {/* Technical Details */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">Technical Details</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <dt className="text-sm font-medium text-gray-500 mb-2">Name Servers</dt>
-              <dd>
-                {report.technical.nameServers && report.technical.nameServers.length > 0 ? (
-                  <ul className="space-y-1">
-                    {report.technical.nameServers.map((ns, index) => (
-                      <li key={index} className="text-sm text-gray-900 font-mono bg-gray-50 px-2 py-1 rounded">
-                        {ns}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <span className="text-sm text-gray-500">Not available</span>
-                )}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">DNSSEC</dt>
-              <dd className="text-sm text-gray-900">
-                {report.technical.dnssec || 'Not available'}
-              </dd>
+        {report.technical && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Technical Details</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {renderDynamicFields('Technical Information', report.technical, [])}
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Website Validation */}
+        {report.website && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Website Validation</h3>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <pre className="text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap">
+                {JSON.stringify(report.website, null, 2)}
+              </pre>
+            </div>
+          </div>
+        )}
 
         {/* Additional Risk Factors */}
-        {report.riskFactors.length > 0 && (
+        {report.riskFactors && report.riskFactors.length > 0 && (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Additional Risk Factors</h3>
             <ul className="space-y-2">
@@ -365,6 +346,28 @@ export function WhoisReport({
             </ul>
           </div>
         )}
+
+        {/* Raw WHOIS Data (for debugging) */}
+        {report.rawWhoisData && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Raw WHOIS Data</h3>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <pre className="text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap">
+                {JSON.stringify(report.rawWhoisData, null, 2)}
+              </pre>
+            </div>
+          </div>
+        )}
+
+        {/* Complete Report Data (for debugging) */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900">Complete Report Data</h3>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <pre className="text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap">
+              {JSON.stringify(report, null, 2)}
+            </pre>
+          </div>
+        </div>
 
         {/* Metadata */}
         <div className="pt-4 border-t border-gray-200">

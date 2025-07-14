@@ -12,18 +12,21 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "dev": "node --loader ts-node/esm src/index.ts",
+    "dev": "tsx src/dev-server.ts",
     "lint": "eslint src/ --ext .ts",
     "lint:fix": "eslint src/ --ext .ts --fix"
   },
   "dependencies": {
-    "whois-json": "^2.0.4",
     "zod": "^3.25.67",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "node-fetch": "^3.3.2",
+    "jsdom": "^24.0.0",
+    "playwright": "^1.48.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.150", 
     "@types/node": "^22.10.12",
+    "@types/jsdom": "^21.1.6",
     "@typescript-eslint/eslint-plugin": "^8.18.2",
     "@typescript-eslint/parser": "^8.18.2",
     "eslint": "^8.57.1",

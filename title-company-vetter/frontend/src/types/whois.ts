@@ -8,33 +8,86 @@
  */
 export interface WhoisReport {
   domain: string;
+  
+  // Basic domain info
+  registryDomainId?: string;
+  
+  // Registrant information
   registrant: {
     name?: string;
     organization?: string;
     email?: string;
     country?: string;
     phone?: string;
+    phoneExt?: string;
+    fax?: string;
+    faxExt?: string;
+    street?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
   };
+  
+  // Administrative contact
+  admin: {
+    name?: string;
+    organization?: string;
+    email?: string;
+    phone?: string;
+    phoneExt?: string;
+    fax?: string;
+    faxExt?: string;
+    street?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+  };
+  
+  // Technical contact
+  tech: {
+    name?: string;
+    organization?: string;
+    email?: string;
+    phone?: string;
+    phoneExt?: string;
+    fax?: string;
+    faxExt?: string;
+    street?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+  };
+  
+  // Registration details
   registration: {
     createdDate?: string;
     expirationDate?: string;
+    updatedDate?: string;
     registrar?: string;
     registrarWhoisServer?: string;
+    registrarUrl?: string;
+    registrarIanaId?: string;
+    registrarAbuseContactEmail?: string;
+    registrarAbuseContactPhone?: string;
   };
+  
+  // Technical details
   technical: {
     nameServers?: string[];
     status?: string;
     dnssec?: string;
   };
-  admin: {
-    name?: string;
-    email?: string;
-  };
-  tech: {
-    name?: string;
-    email?: string;
-  };
+  
+  // Additional validation results
+  website?: any; // WebsiteValidationResult from backend
   riskFactors: string[];
+  
+  // Raw WHOIS data for reference
+  rawWhoisData?: any;
+  
+  // Metadata
   metadata: {
     lookupTime: number;
     source: string;

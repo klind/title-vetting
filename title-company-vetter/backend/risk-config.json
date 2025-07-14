@@ -1,0 +1,241 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2024-01-01",
+  "description": "Risk assessment configuration for title company domain validation",
+  
+  "riskFactors": {
+    "registrar": {
+      "suspiciousPatterns": [
+        "unknown",
+        "private", 
+        "anonymous",
+        "hidden",
+        "masked",
+        "protected",
+        "proxy"
+      ],
+      "highRiskRegistrars": [
+        "unknown registrar",
+        "private registrar",
+        "anonymous registrar"
+      ],
+      "weights": {
+        "suspiciousPattern": 30,
+        "highRiskRegistrar": 50,
+        "unknownRegistrar": 20
+      }
+    },
+    
+    "registration": {
+      "recentRegistration": {
+        "thresholdDays": 30,
+        "weight": 25,
+        "description": "Domain registered within last 30 days"
+      },
+      "expiringSoon": {
+        "thresholdDays": 30,
+        "weight": 20,
+        "description": "Domain expires within 30 days"
+      },
+      "expired": {
+        "weight": 40,
+        "description": "Domain has expired"
+      },
+      "noExpirationDate": {
+        "weight": 15,
+        "description": "No expiration date found"
+      }
+    },
+    
+    "contact": {
+      "privacyProtection": {
+        "patterns": [
+          "privacy",
+          "private",
+          "anonymous",
+          "hidden",
+          "masked",
+          "protected",
+          "proxy"
+        ],
+        "weight": 35,
+        "description": "Contact information appears to be privacy protected"
+      },
+      "missingContact": {
+        "weight": 25,
+        "description": "Missing or incomplete contact information"
+      },
+      "genericContact": {
+        "patterns": [
+          "admin@",
+          "info@",
+          "contact@",
+          "webmaster@",
+          "postmaster@"
+        ],
+        "weight": 15,
+        "description": "Generic contact email address"
+      },
+      "noEmail": {
+        "weight": 30,
+        "description": "No email address found"
+      }
+    },
+    
+    "technical": {
+      "noNameServers": {
+        "weight": 20,
+        "description": "No name servers configured"
+      },
+      "genericNameServers": {
+        "patterns": [
+          "ns1.",
+          "ns2.",
+          "dns1.",
+          "dns2."
+        ],
+        "weight": 10,
+        "description": "Generic name server names"
+      },
+      "noDNSSEC": {
+        "weight": 5,
+        "description": "DNSSEC not configured"
+      }
+    },
+    
+    "website": {
+      "noWebsite": {
+        "weight": 15,
+        "description": "No website accessible"
+      },
+      "noSSL": {
+        "weight": 20,
+        "description": "No SSL certificate"
+      },
+      "selfSignedSSL": {
+        "weight": 25,
+        "description": "Self-signed SSL certificate"
+      },
+      "invalidSSL": {
+        "weight": 30,
+        "description": "Invalid SSL certificate"
+      },
+      "noContactInfo": {
+        "weight": 15,
+        "description": "No contact information found on website"
+      },
+      "noSocialMedia": {
+        "weight": 10,
+        "description": "No social media presence found"
+      }
+    },
+    
+    "geographic": {
+      "highRiskCountries": [
+        "XX", // Placeholder for actual high-risk country codes
+        "YY",
+        "ZZ"
+      ],
+      "weight": 40,
+      "description": "Domain registered in high-risk country"
+    }
+  },
+  
+  "riskLevels": {
+    "low": {
+      "minScore": 0,
+      "maxScore": 30,
+      "color": "#10B981",
+      "description": "Low risk - standard due diligence recommended"
+    },
+    "medium": {
+      "minScore": 31,
+      "maxScore": 60,
+      "color": "#F59E0B",
+      "description": "Medium risk - additional verification recommended"
+    },
+    "high": {
+      "minScore": 61,
+      "maxScore": 80,
+      "color": "#EF4444",
+      "description": "High risk - extensive verification required"
+    },
+    "critical": {
+      "minScore": 81,
+      "maxScore": 100,
+      "color": "#7F1D1D",
+      "description": "Critical risk - avoid or require extensive documentation"
+    }
+  },
+  
+  "recommendations": {
+    "low": [
+      "Standard due diligence procedures",
+      "Verify domain ownership through standard channels",
+      "Check for legitimate business presence"
+    ],
+    "medium": [
+      "Request additional verification documents",
+      "Verify domain ownership through multiple channels",
+      "Check for legitimate business presence and history",
+      "Consider additional security measures"
+    ],
+    "high": [
+      "Require extensive verification documentation",
+      "Verify domain ownership through multiple independent sources",
+      "Check for legitimate business presence and history",
+      "Consider escrow or other protective measures",
+      "Verify all contact information independently"
+    ],
+    "critical": [
+      "Avoid transaction or require extensive documentation",
+      "Verify domain ownership through multiple independent sources",
+      "Require notarized documentation",
+      "Consider legal review",
+      "Verify all contact information through multiple channels",
+      "Require additional security measures"
+    ]
+  },
+  
+  "validationRules": {
+    "requiredFields": [
+      "domainName",
+      "registrar",
+      "creationDate"
+    ],
+    "optionalFields": [
+      "expirationDate",
+      "registrantName",
+      "registrantOrganization",
+      "registrantEmail",
+      "registrantPhone",
+      "registrantCountry",
+      "nameServers",
+      "status"
+    ],
+    "minimumDataQuality": {
+      "score": 70,
+      "description": "Minimum data quality score required for reliable assessment"
+    }
+  },
+  
+  "scoring": {
+    "baseScore": 0,
+    "maxScore": 100,
+    "weights": {
+      "registrar": 0.25,
+      "registration": 0.20,
+      "contact": 0.25,
+      "technical": 0.10,
+      "website": 0.15,
+      "geographic": 0.05
+    }
+  },
+  
+  "metadata": {
+    "author": "Title Company Vetter System",
+    "version": "1.0.0",
+    "lastUpdated": "2024-01-01",
+    "source": "Industry best practices and risk assessment guidelines"
+  }
+} 

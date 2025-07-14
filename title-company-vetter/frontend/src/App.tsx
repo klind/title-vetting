@@ -1,320 +1,389 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { UrlInput } from './components/UrlInput';
-import { LoadingSpinner, LoadingOverlay } from './components/LoadingSpinner';
-import { WhoisReport } from './components/WhoisReport';
-import { useWhoisLookup } from './hooks/useWhoisLookup';
-import { ProcessingStatus, RiskLevel } from './types/whois';
-import './App.css';
+import React, { useState } from 'react';
+import UrlInput from './components/UrlInput';
+import LoadingSpinner from './components/LoadingSpinner';
 
-/**
- * Error Boundary Component
- */
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error?: Error;
+interface WhoisData {
+  [key: string]: any;
 }
 
-class ErrorBoundary extends React.Component<
-  { children: React.ReactNode; onReset?: () => void },
-  ErrorBoundaryState
-> {
-  constructor(props: { children: React.ReactNode; onReset?: () => void }) {
-    super(props);
-    this.state = { hasError: false };
-  }
+const App: React.FC = () => {
+  console.log('App component rendering...');
+  
+  const [url, setUrl] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [whoisData, setWhoisData] = useState<WhoisData | null>(null);
+  const [showRawJsonModal, setShowRawJsonModal] = useState(false);
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('Form submitted with URL:', url);
+    if (!url.trim()) return;
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Application Error:', error, errorInfo);
-  }
+    setLoading(true);
+    setError(null);
+    setWhoisData(null);
 
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
-            <div className="text-error-600 mb-4">
-              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Something went wrong</h2>
-            <p className="text-gray-600 mb-6">
-              An unexpected error occurred. Please refresh the page or try again.
-            </p>
-            <div className="space-y-3">
-              <button
-                onClick={() => window.location.reload()}
-                className="btn-primary w-full"
-              >
-                Refresh Page
-              </button>
-              {this.props.onReset && (
-                <button
-                  onClick={() => {
-                    this.setState({ hasError: false, error: undefined });
-                    this.props.onReset?.();
-                  }}
-                  className="btn-secondary w-full"
-                >
-                  Try Again
-                </button>
-              )}
-            </div>
-            {process.env.NODE_ENV === 'development' && this.state.error && (
-              <details className="mt-4 text-left">
-                <summary className="text-sm text-gray-500 cursor-pointer">Error Details</summary>
-                <pre className="mt-2 text-xs text-gray-700 bg-gray-100 p-2 rounded overflow-auto">
-                  {this.state.error.stack}
-                </pre>
-              </details>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    return <>{this.props.children}</>;
-  }
-}
-
-/**
- * Main Application Component
- */
-function App() {
-  const [showResults, setShowResults] = useState(false);
-  const {
-    state,
-    lookupDomain,
-    reset,
-    validateUrl,
-    getRiskAssessment,
-    loading,
-    error,
-    data: whoisData,
-    status,
-    progress,
-  } = useWhoisLookup();
-
-  /**
-   * Handles URL submission for WHOIS lookup
-   */
-  const handleUrlSubmit = useCallback(async (url: string) => {
     try {
-      await lookupDomain(url);
-      setShowResults(true);
-    } catch (error) {
-      console.error('Lookup failed:', error);
-    }
-  }, [lookupDomain]);
-
-  /**
-   * Handles starting a new lookup
-   */
-  const handleNewLookup = useCallback(() => {
-    reset();
-    setShowResults(false);
-  }, [reset]);
-
-  /**
-   * Handles keyboard shortcuts
-   */
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        if (loading) {
-          // Could implement abort functionality here if needed
-        } else if (showResults) {
-          handleNewLookup();
-        }
+      // Add protocol if missing
+      let fullUrl = url.trim();
+      if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
+        fullUrl = `https://${fullUrl}`;
       }
-    };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [loading, showResults, handleNewLookup]);
+      console.log('Making API call to:', fullUrl);
+      const response = await fetch('http://localhost:3001/whois', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: fullUrl }),
+      });
 
-  /**
-   * Gets the appropriate loading message based on status
-   */
-  const getLoadingMessage = (): string => {
-    switch (status) {
-      case ProcessingStatus.VALIDATING:
-        return 'Validating URL...';
-      case ProcessingStatus.FETCHING:
-        return 'Connecting to WHOIS service...';
-      case ProcessingStatus.PROCESSING:
-        return 'Processing domain information...';
-      default:
-        return 'Processing request...';
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Response error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('Received data:', data);
+      
+      // Check if the response has the expected structure
+      if (data.success === false) {
+        throw new Error(data.error || 'API returned error');
+      }
+      
+      // Extract the actual data from the response
+      const whoisData = data.data || data;
+      console.log('Processed WHOIS data:', whoisData);
+      setWhoisData(whoisData);
+    } catch (err) {
+      console.error('API error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
     }
   };
 
-  /**
-   * Risk assessment from the data
-   */
-  const riskAssessment = whoisData ? getRiskAssessment(whoisData) : state.riskAssessment;
+  // Component to render a formatted report from JSON data
+  const renderReport = (data: WhoisData): JSX.Element => {
+    const renderField = (label: string, value: any, type: 'text' | 'date' | 'status' = 'text') => {
+      if (value === null || value === undefined || value === '') {
+        return null;
+      }
 
-  return (
-    <ErrorBoundary onReset={handleNewLookup}>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Title Company Vetter</h1>
-                <p className="text-sm text-gray-600 mt-1">
-                  Verify domain registration information and assess potential risks
-                </p>
-              </div>
-              
-              {showResults && (
-                <button
-                  onClick={handleNewLookup}
-                  className="btn-secondary"
-                  disabled={loading}
-                >
-                  New Lookup
-                </button>
-              )}
+      let displayValue = value;
+      let statusClass = '';
+
+      if (type === 'date' && typeof value === 'string') {
+        try {
+          const date = new Date(value);
+          displayValue = date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          });
+        } catch {
+          displayValue = value;
+        }
+      } else if (type === 'status') {
+        const status = String(value).toLowerCase();
+        if (status.includes('active') || status.includes('ok') || status.includes('valid')) {
+          statusClass = 'bg-green-100 text-green-800 border-green-200';
+        } else if (status.includes('pending') || status.includes('processing')) {
+          statusClass = 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        } else {
+          statusClass = 'bg-red-100 text-red-800 border-red-200';
+        }
+      }
+
+      return (
+        <div key={label} className="flex flex-col sm:flex-row sm:items-center py-2 border-b border-gray-700 last:border-b-0">
+          <dt className="text-sm font-medium text-gray-400 sm:w-1/3 sm:pr-4">{label}</dt>
+          <dd className="text-sm text-white mt-1 sm:mt-0 sm:w-2/3">
+            {type === 'status' ? (
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusClass}`}>
+                {displayValue}
+              </span>
+            ) : (
+              <span className="font-mono">{displayValue}</span>
+            )}
+          </dd>
+        </div>
+      );
+    };
+
+    const renderSection = (title: string, data: any, fields: Array<{ key: string; label: string; type?: 'text' | 'date' | 'status' }>) => {
+      if (!data || typeof data !== 'object') return null;
+
+      return (
+        <div key={title} className="bg-gray-800 rounded-lg p-6 mb-6">
+          <h3 className="text-lg font-semibold text-orange-400 mb-4">{title}</h3>
+          <dl className="space-y-0">
+            {fields.map(field => renderField(field.label, data[field.key], field.type))}
+          </dl>
+        </div>
+      );
+    };
+
+    const renderArraySection = (title: string, data: any[], itemRenderer: (item: any, index: number) => JSX.Element) => {
+      if (!Array.isArray(data) || data.length === 0) return null;
+
+      return (
+        <div key={title} className="bg-gray-800 rounded-lg p-6 mb-6">
+          <h3 className="text-lg font-semibold text-orange-400 mb-4">{title}</h3>
+          <div className="space-y-3">
+            {data.map((item, index) => itemRenderer(item, index))}
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Domain Information */}
+        {renderSection('Domain Information', { domain: data.domain }, [
+          { key: 'domain', label: 'Domain Name' },
+        ])}
+
+        {/* Registration Information */}
+        {renderSection('Registration Information', data.registration, [
+          { key: 'registrar', label: 'Registrar' },
+          { key: 'createdDate', label: 'Creation Date', type: 'date' },
+          { key: 'expirationDate', label: 'Expiration Date', type: 'date' },
+          { key: 'updatedDate', label: 'Last Updated', type: 'date' },
+          { key: 'registrarUrl', label: 'Registrar URL' },
+          { key: 'registrarIanaId', label: 'Registrar IANA ID' },
+        ])}
+
+        {/* Registrant Information */}
+        {renderSection('Registrant Information', data.registrant, [
+          { key: 'name', label: 'Name' },
+          { key: 'organization', label: 'Organization' },
+          { key: 'email', label: 'Email' },
+          { key: 'phone', label: 'Phone' },
+          { key: 'country', label: 'Country' },
+          { key: 'state', label: 'State/Province' },
+          { key: 'city', label: 'City' },
+          { key: 'street', label: 'Street Address' },
+          { key: 'postalCode', label: 'Postal Code' },
+        ])}
+
+        {/* Admin Contact Information */}
+        {renderSection('Admin Contact', data.admin, [
+          { key: 'name', label: 'Name' },
+          { key: 'organization', label: 'Organization' },
+          { key: 'email', label: 'Email' },
+          { key: 'phone', label: 'Phone' },
+          { key: 'country', label: 'Country' },
+          { key: 'state', label: 'State/Province' },
+          { key: 'city', label: 'City' },
+        ])}
+
+        {/* Technical Contact Information */}
+        {renderSection('Technical Contact', data.tech, [
+          { key: 'name', label: 'Name' },
+          { key: 'organization', label: 'Organization' },
+          { key: 'email', label: 'Email' },
+          { key: 'phone', label: 'Phone' },
+          { key: 'country', label: 'Country' },
+          { key: 'state', label: 'State/Province' },
+          { key: 'city', label: 'City' },
+        ])}
+
+        {/* Technical Information */}
+        {renderSection('Technical Information', data.technical, [
+          { key: 'nameServers', label: 'Name Servers' },
+          { key: 'status', label: 'Domain Status', type: 'status' },
+          { key: 'dnssec', label: 'DNSSEC' },
+        ])}
+
+        {/* Website Validation */}
+        {data.website && renderSection('Website Validation', data.website, [
+          { key: 'hasWebsite', label: 'Website Accessible', type: 'status' },
+          { key: 'isAccessible', label: 'Website Reachable', type: 'status' },
+          { key: 'hasDns', label: 'DNS Resolution', type: 'status' },
+          { key: 'responseTime', label: 'Response Time' },
+        ])}
+
+        {/* Contact Information from Website */}
+        {data.website?.contacts && renderSection('Website Contact Information', data.website.contacts, [
+          { key: 'emails', label: 'Email Addresses' },
+          { key: 'phones', label: 'Phone Numbers' },
+          { key: 'addresses', label: 'Addresses' },
+        ])}
+
+        {/* Social Media */}
+        {data.website?.socialMedia && renderArraySection('Social Media Presence', data.website.socialMedia, (platform, index) => (
+          <div key={index} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+            <span className="text-white font-medium">{platform.platform}</span>
+            <span className={`px-2 py-1 rounded text-xs font-medium ${
+              platform.exists ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            }`}>
+              {platform.exists ? 'Found' : 'Not Found'}
+            </span>
+          </div>
+        ))}
+
+        {/* Risk Assessment */}
+        {data.riskFactors && renderArraySection('Risk Factors', data.riskFactors, (factor, index) => (
+          <div key={index} className="flex items-start gap-3 p-3 bg-red-900/20 border border-red-500 rounded-lg">
+            <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0" />
+            <span className="text-red-300">{factor}</span>
+          </div>
+        ))}
+
+        {/* Metadata */}
+        {data.metadata && renderSection('Lookup Information', data.metadata, [
+          { key: 'lookupTime', label: 'Lookup Duration (ms)' },
+          { key: 'source', label: 'Data Source' },
+          { key: 'timestamp', label: 'Lookup Time', type: 'date' },
+        ])}
+
+        {/* Fallback: Show raw data if no structured sections have data */}
+        {(!data.registration && !data.registrant && !data.technical && !data.website) && (
+          <div className="bg-gray-800 rounded-lg p-6 mb-6">
+            <h3 className="text-lg font-semibold text-orange-400 mb-4">Raw Response Data</h3>
+            <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm overflow-auto max-h-96">
+              <pre className="text-gray-300 whitespace-pre-wrap">
+                {JSON.stringify(data, null, 2)}
+              </pre>
             </div>
           </div>
-        </header>
+        )}
 
-        {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {!showResults ? (
-            /* Input Form */
-            <div className="max-w-2xl mx-auto">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                  Verify Title Company Legitimacy
-                </h2>
-                <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-                  Enter a title company's website URL to perform a comprehensive WHOIS lookup 
-                  and risk assessment. We'll analyze domain registration information, identify 
-                  potential red flags, and provide recommendations for due diligence.
-                </p>
-              </div>
+        {/* Raw Data Button */}
+        <div className="text-center">
+          <button
+            onClick={() => setShowRawJsonModal(true)}
+            className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-colors duration-200 font-medium"
+          >
+            View Raw JSON Data
+          </button>
+        </div>
+      </div>
+    );
+  };
 
-              <div className="bg-white rounded-lg shadow-lg p-8">
-                <UrlInput
-                  onSubmit={handleUrlSubmit}
-                  loading={loading}
-                  validationErrors={state.validationErrors}
-                  disabled={loading}
-                />
-                
-                {/* Loading State */}
-                {loading && (
-                  <div className="mt-8">
-                    <LoadingSpinner
-                      size="lg"
-                      variant="spinner"
-                      showProgress={true}
-                      progress={progress}
-                      currentStep={state.currentStep}
-                      text={getLoadingMessage()}
-                    />
+  // Modal component for raw JSON
+  const RawJsonModal: React.FC<{ isOpen: boolean; onClose: () => void; data: WhoisData }> = ({ 
+    isOpen, 
+    onClose, 
+    data 
+  }) => {
+    if (!isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-gray-900 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+          <div className="flex items-center justify-between p-6 border-b border-gray-700">
+            <h2 className="text-xl font-bold text-orange-400">Raw JSON Data</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="p-6 overflow-auto max-h-[calc(90vh-120px)]">
+            <pre className="text-sm text-gray-300 font-mono whitespace-pre-wrap">
+              {JSON.stringify(data, null, 2)}
+            </pre>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-950 text-white">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Test message to verify rendering */}
+          <div className="text-center mb-4 p-4 bg-green-900/20 border border-green-500 rounded-lg">
+            <p className="text-green-300">React is rendering! App component loaded successfully.</p>
+          </div>
+          
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-orange-400 mb-2">
+              Title Company Vetter
+            </h1>
+            <p className="text-gray-400">
+              Comprehensive domain validation and risk assessment
+            </p>
+          </div>
+
+          {/* Input Form */}
+          <div className="bg-gray-900 rounded-lg p-6 mb-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <UrlInput
+                value={url}
+                onChange={setUrl}
+                placeholder="Enter domain name (e.g., legacytitleok.com)"
+                disabled={loading}
+              />
+              <button
+                type="submit"
+                disabled={loading || !url.trim()}
+                className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <LoadingSpinner />
+                    <span className="ml-2">Vetting Domain...</span>
                   </div>
+                ) : (
+                  'Vet Title Company'
                 )}
-                
-                {/* Error State */}
-                {error && !loading && (
-                  <div className="mt-6 p-4 bg-error-50 border border-error-200 rounded-lg">
-                    <div className="flex items-start">
-                      <svg className="w-5 h-5 text-error-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                      </svg>
-                      <div className="ml-3">
-                        <h3 className="text-sm font-medium text-error-800">
-                          Lookup Failed
-                        </h3>
-                        <p className="text-sm text-error-700 mt-1">
-                          {error}
-                        </p>
-                        <div className="mt-3">
-                          <button
-                            onClick={() => reset()}
-                            className="text-sm text-error-600 hover:text-error-700 font-medium"
-                          >
-                            Try again
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+              </button>
+            </form>
+          </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 mb-6">
+              <div className="flex items-center">
+                <div className="text-red-400 font-semibold">Error:</div>
+                <div className="ml-2 text-red-300">{error}</div>
               </div>
-
-              {/* Information Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-                <div className="bg-white p-6 rounded-lg shadow-sm">
-                  <div className="text-primary-600 mb-3">
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.031 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Domain Analysis</h3>
-                  <p className="text-sm text-gray-600">
-                    Comprehensive WHOIS lookup with registration details, contact information, and technical data.
-                  </p>
-                </div>
-
-                <div className="bg-white p-6 rounded-lg shadow-sm">
-                  <div className="text-primary-600 mb-3">
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Risk Assessment</h3>
-                  <p className="text-sm text-gray-600">
-                    Automated analysis of potential red flags and risk factors based on domain patterns.
-                  </p>
-                </div>
-
-                <div className="bg-white p-6 rounded-lg shadow-sm">
-                  <div className="text-primary-600 mb-3">
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Recommendations</h3>
-                  <p className="text-sm text-gray-600">
-                    Actionable insights and recommendations for due diligence procedures.
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Results Display */
-            <div className="space-y-6">
-              {whoisData && (
-                <WhoisReport
-                  report={whoisData}
-                  riskAssessment={riskAssessment}
-                  onNewLookup={handleNewLookup}
-                />
-              )}
             </div>
           )}
-        </main>
 
-        {/* Loading Overlay */}
-        <LoadingOverlay
-          isVisible={loading && status === ProcessingStatus.FETCHING}
-          text={getLoadingMessage()}
-          progress={progress}
-          showProgress={true}
-          variant="spinner"
-        />
+          {/* Results Display */}
+          {whoisData && (
+            <div className="bg-gray-900 rounded-lg p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-orange-400">
+                  WHOIS Report
+                </h2>
+                <div className="text-sm text-gray-400">
+                  Domain: {whoisData.domain || 'Unknown'}
+                </div>
+              </div>
+              
+              {renderReport(whoisData)}
+            </div>
+          )}
+
+          {/* Raw JSON Modal */}
+          {whoisData && (
+            <RawJsonModal
+              isOpen={showRawJsonModal}
+              onClose={() => setShowRawJsonModal(false)}
+              data={whoisData}
+            />
+          )}
+        </div>
       </div>
-    </ErrorBoundary>
+    </div>
   );
-}
+};
 
 export default App;

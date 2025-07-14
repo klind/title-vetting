@@ -1,4 +1,3 @@
-import whois from 'whois-json';
 import { 
   WhoisResult, 
   WhoisReport, 
@@ -9,6 +8,8 @@ import {
   assessRiskFactors 
 } from './types.js';
 import { validateUrl, extractDomain } from './url-validator.js';
+import { validateWebsiteComprehensive } from './website-validator.js';
+import { customWhoisLookup } from './custom-whois.js';
 
 /**
  * Rate limiting configuration
@@ -63,12 +64,12 @@ export async function performWhoisLookup(
       await checkRateLimit(clientIp);
     }
 
-    // Check cache first
-    const cached = getCachedResult(domain);
-    if (cached) {
-      console.log(`Cache hit for domain: ${domain}`);
-      return cached;
-    }
+    // Cache disabled - always perform fresh lookup
+    // const cached = getCachedResult(domain);
+    // if (cached) {
+    //   console.log(`Cache hit for domain: ${domain}`);
+    //   return cached;
+    // }
 
     // Perform WHOIS lookup
     console.log(`Performing WHOIS lookup for domain: ${domain}`);
@@ -76,10 +77,10 @@ export async function performWhoisLookup(
 
     // Validate and transform the data
     const validatedData = validateWhoisData(rawWhoisData);
-    const transformedReport = transformWhoisData(domain, validatedData, startTime);
+    const transformedReport = await transformWhoisData(domain, validatedData, startTime);
 
-    // Cache the result
-    setCachedResult(domain, transformedReport);
+    // Cache disabled - don't store results
+    // setCachedResult(domain, transformedReport);
 
     console.log(`WHOIS lookup completed for ${domain} in ${Date.now() - startTime}ms`);
     return transformedReport;
@@ -87,6 +88,13 @@ export async function performWhoisLookup(
   } catch (error) {
     const duration = Date.now() - startTime;
     console.error(`WHOIS lookup failed for ${url} after ${duration}ms:`, error);
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace',
+      type: typeof error,
+      constructor: error?.constructor?.name
+    });
     
     if (error instanceof Error && error.name === 'ApiError') {
       throw error;
@@ -111,27 +119,30 @@ async function performRawWhoisLookup(domain: string): Promise<any> {
   const timeout = parseInt(process.env.WHOIS_TIMEOUT || DEFAULT_TIMEOUT.toString());
 
   try {
-    // Create a timeout promise
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(createApiError(
-          ErrorType.TIMEOUT_ERROR,
-          `WHOIS lookup timed out after ${timeout}ms`,
-          504
-        ));
-      }, timeout);
-    });
-
-    // Race between WHOIS lookup and timeout
-    const whoisPromise = whois(domain, {
+    console.log(`🔍 Performing custom WHOIS lookup for domain: ${domain}`);
+    
+    // Use our custom WHOIS service
+    const result = await customWhoisLookup(domain, {
+      timeout,
       follow: 3,
-      verbose: false,
+      verbose: true,
+      parseResponse: true
     });
 
-    const result = await Promise.race([whoisPromise, timeoutPromise]);
+    console.log(`✅ Custom WHOIS lookup completed for ${domain}`);
+    console.log('WHOIS raw data:', result);
     return result;
 
   } catch (error) {
+    console.error(`❌ Custom WHOIS lookup failed for ${domain}:`, error);
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace',
+      type: typeof error,
+      constructor: error?.constructor?.name
+    });
+    
     // Handle specific WHOIS errors
     if (error instanceof Error) {
       if (error.message.includes('No whois server')) {
@@ -177,17 +188,68 @@ function validateWhoisData(rawData: any): WhoisResult {
   } catch (error) {
     console.warn('WHOIS data validation failed, using raw data:', error);
     
-    // If validation fails, return a minimal valid structure
+    // If validation fails, return a minimal valid structure with raw data
+    // Map the parsed WHOIS fields to the expected structure
     return {
-      domainName: rawData?.domainName || undefined,
+      domainName: rawData?.domainName || rawData?.domain || undefined,
       registrantName: rawData?.registrantName || undefined,
       registrantOrganization: rawData?.registrantOrganization || undefined,
       registrantEmail: rawData?.registrantEmail || undefined,
+      registrantCountry: rawData?.registrantCountry || undefined,
+      registrantPhone: rawData?.registrantPhone || undefined,
+      registrantPhoneExt: rawData?.registrantPhoneExt || undefined,
+      registrantFax: rawData?.registrantFax || undefined,
+      registrantFaxExt: rawData?.registrantFaxExt || undefined,
+      registrantStreet: rawData?.registrantStreet || undefined,
+      registrantCity: rawData?.registrantCity || undefined,
+      registrantState: rawData?.registrantState || rawData?.registrantstateprovince || undefined,
+      registrantPostalCode: rawData?.registrantpostalcode || undefined,
+      
+      // Admin contact
+      adminName: rawData?.adminName || undefined,
+      adminOrganization: rawData?.adminOrganization || undefined,
+      adminEmail: rawData?.adminEmail || undefined,
+      adminPhone: rawData?.adminPhone || undefined,
+      adminPhoneExt: rawData?.adminPhoneExt || undefined,
+      adminFax: rawData?.adminFax || undefined,
+      adminFaxExt: rawData?.adminFaxExt || undefined,
+      adminStreet: rawData?.adminStreet || undefined,
+      adminCity: rawData?.adminCity || undefined,
+      adminState: rawData?.adminState || undefined,
+      adminPostalCode: rawData?.adminPostalCode || undefined,
+      adminCountry: rawData?.adminCountry || undefined,
+      
+      // Tech contact
+      techName: rawData?.techName || rawData?.techname || undefined,
+      techOrganization: rawData?.techOrganization || rawData?.techorganization || undefined,
+      techEmail: rawData?.techEmail || rawData?.techemail || undefined,
+      techPhone: rawData?.techPhone || rawData?.techphone || undefined,
+      techPhoneExt: rawData?.techPhoneExt || undefined,
+      techFax: rawData?.techFax || undefined,
+      techFaxExt: rawData?.techFaxExt || undefined,
+      techStreet: rawData?.techStreet || rawData?.techstreet || undefined,
+      techCity: rawData?.techCity || rawData?.techcity || undefined,
+      techState: rawData?.techState || rawData?.techstateprovince || undefined,
+      techPostalCode: rawData?.techPostalCode || rawData?.techpostalcode || undefined,
+      techCountry: rawData?.techCountry || rawData?.techcountry || undefined,
+      
+      // Registration details
       creationDate: rawData?.creationDate || undefined,
-      expirationDate: rawData?.expirationDate || undefined,
+      expirationDate: rawData?.expirationDate || rawData?.registrarregistrationexpirationdate || undefined,
+      updatedDate: rawData?.updatedDate || undefined,
       registrar: rawData?.registrar || undefined,
-      nameServers: rawData?.nameServers || undefined,
-      status: rawData?.status || undefined,
+      registrarWhoisServer: rawData?.registrarWhoisServer || undefined,
+      registrarUrl: rawData?.registrarUrl || rawData?.registrarurl || undefined,
+      registrarIanaId: rawData?.registrarIanaId || rawData?.registrarianaid || undefined,
+      registrarAbuseContactEmail: rawData?.registrarAbuseContactEmail || rawData?.registrarabusecontactemail || undefined,
+      registrarAbuseContactPhone: rawData?.registrarAbuseContactPhone || rawData?.registrarabusecontactphone || undefined,
+      
+      // Technical details
+      nameServers: rawData?.nameServers || rawData?.nameserver || undefined,
+      status: rawData?.status || rawData?.domainstatus || undefined,
+      dnssec: rawData?.dnssec || undefined,
+      
+      rawWhoisData: rawData, // Include raw data for reference
     };
   }
 }
@@ -200,51 +262,102 @@ function validateWhoisData(rawData: any): WhoisResult {
  * @param startTime - Lookup start timestamp
  * @returns Structured WHOIS report
  */
-function transformWhoisData(
+async function transformWhoisData(
   domain: string, 
   whoisData: WhoisResult, 
   startTime: number
-): WhoisReport {
-  // Process name servers
-  const nameServers = whoisData.nameServers 
-    ? whoisData.nameServers.split(/[\s,]+/).filter(ns => ns.length > 0)
-    : undefined;
+): Promise<WhoisReport> {
+  // Temporarily disable website validation to isolate the issue
+  let websiteValidation = {
+    hasWebsite: false,
+    isAccessible: false,
+    hasDns: false,
+    error: 'Website validation temporarily disabled'
+  };
 
   // Assess risk factors
   const riskFactors = assessRiskFactors(whoisData);
 
   const report: WhoisReport = {
     domain,
+    
+    // Return the raw WHOIS data as the main data structure
     registrant: {
       name: whoisData.registrantName,
       organization: whoisData.registrantOrganization,
       email: whoisData.registrantEmail,
       country: whoisData.registrantCountry,
       phone: whoisData.registrantPhone,
+      phoneExt: whoisData.registrantPhoneExt,
+      fax: whoisData.registrantFax,
+      faxExt: whoisData.registrantFaxExt,
+      street: whoisData.registrantStreet || whoisData.registrantstreet,
+      city: whoisData.registrantCity || whoisData.registrantcity,
+      state: whoisData.registrantState || whoisData.registrantstateprovince,
+      postalCode: whoisData.registrantPostalCode || whoisData.registrantpostalcode,
     },
-    registration: {
-      createdDate: whoisData.creationDate,
-      expirationDate: whoisData.expirationDate,
-      registrar: whoisData.registrar,
-      registrarWhoisServer: whoisData.registrarWhoisServer,
-    },
-    technical: {
-      nameServers,
-      status: whoisData.status,
-      dnssec: whoisData.dnssec,
-    },
+    
     admin: {
       name: whoisData.adminName,
+      organization: whoisData.adminOrganization,
       email: whoisData.adminEmail,
+      phone: whoisData.adminPhone,
+      phoneExt: whoisData.adminPhoneExt,
+      fax: whoisData.adminFax,
+      faxExt: whoisData.adminFaxExt,
+      street: whoisData.adminStreet,
+      city: whoisData.adminCity,
+      state: whoisData.adminState,
+      postalCode: whoisData.adminPostalCode,
+      country: whoisData.adminCountry,
     },
+    
     tech: {
-      name: whoisData.techName,
-      email: whoisData.techEmail,
+      name: whoisData.techName || whoisData.techname,
+      organization: whoisData.techOrganization || whoisData.techorganization,
+      email: whoisData.techEmail || whoisData.techemail,
+      phone: whoisData.techPhone || whoisData.techphone,
+      phoneExt: whoisData.techPhoneExt,
+      fax: whoisData.techFax,
+      faxExt: whoisData.techFaxExt,
+      street: whoisData.techStreet || whoisData.techstreet,
+      city: whoisData.techCity || whoisData.techcity,
+      state: whoisData.techState || whoisData.techstateprovince,
+      postalCode: whoisData.techPostalCode || whoisData.techpostalcode,
+      country: whoisData.techCountry || whoisData.techcountry,
     },
+    
+    registration: {
+      createdDate: whoisData.creationDate,
+      expirationDate: whoisData.expirationDate || whoisData.registrarregistrationexpirationdate,
+      updatedDate: whoisData.updatedDate,
+      registrar: whoisData.registrar,
+      registrarWhoisServer: whoisData.registrarWhoisServer,
+      registrarUrl: whoisData.registrarUrl || whoisData.registrarurl,
+      registrarIanaId: whoisData.registrarIanaId || whoisData.registrarianaid,
+      registrarAbuseContactEmail: whoisData.registrarAbuseContactEmail || whoisData.registrarabusecontactemail,
+      registrarAbuseContactPhone: whoisData.registrarAbuseContactPhone || whoisData.registrarabusecontactphone,
+    },
+    
+    technical: {
+      nameServers: whoisData.nameServers 
+        ? whoisData.nameServers.split(/[\s,]+/).filter(ns => ns.length > 0)
+        : whoisData.nameserver
+          ? [whoisData.nameserver].flat().filter(ns => ns.length > 0)
+          : undefined,
+      status: whoisData.status || whoisData.domainstatus,
+      dnssec: whoisData.dnssec,
+    },
+    
+    website: websiteValidation,
     riskFactors,
+    
+    // Include the complete raw WHOIS data
+    rawWhoisData: whoisData,
+    
     metadata: {
       lookupTime: Date.now() - startTime,
-      source: 'whois-json',
+      source: 'custom-whois',
       timestamp: new Date().toISOString(),
     },
   };
