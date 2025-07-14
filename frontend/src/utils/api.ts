@@ -1,11 +1,11 @@
-import { 
+import type { 
   ApiResponse, 
   ApiConfig, 
   RequestOptions, 
   HttpMethod, 
-  ErrorType, 
   AppError 
 } from '../types/whois';
+import { ErrorType } from '../types/whois';
 
 /**
  * Default API configuration
@@ -87,7 +87,6 @@ class ApiClient {
         signal: abortController.signal,
         timeout,
         retries,
-        requestId,
       });
     } finally {
       this.abortControllers.delete(requestId);
@@ -166,9 +165,8 @@ class ApiClient {
     signal: AbortSignal;
     timeout: number;
     retries: number;
-    requestId: string;
   }): Promise<ApiResponse<any>> {
-    const { url, method, headers, body, signal, timeout, retries, requestId } = params;
+    const { url, method, headers, body, signal, timeout, retries } = params;
     let lastError: AppError | null = null;
 
     for (let attempt = 0; attempt <= retries; attempt++) {
@@ -362,7 +360,7 @@ class ApiClient {
    * Checks if error is retryable based on status code
    */
   private isRetryableError(status: number): boolean {
-    return RETRYABLE_STATUS_CODES.includes(status);
+    return RETRYABLE_STATUS_CODES.includes(status as any);
   }
 
   /**
@@ -373,7 +371,7 @@ class ApiClient {
       ErrorType.NETWORK_ERROR,
       ErrorType.TIMEOUT_ERROR,
       ErrorType.API_ERROR,
-    ].includes(type);
+    ].includes(type as any);
   }
 
   /**

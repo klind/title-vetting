@@ -8,7 +8,7 @@ import type {
   ValidationError,
   UseApiHookReturn 
 } from '../types/whois';
-import { ProcessingStatus, RiskLevel, ErrorType } from '../types/whois';
+import { ProcessingStatus, RiskLevel } from '../types/whois';
 import { apiClient, formatApiError, isOnline } from '../utils/api';
 
 /**

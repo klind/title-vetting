@@ -5,18 +5,19 @@ import { createMockResponse } from '../test/setup';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
+(globalThis as any).fetch = mockFetch;
 
 // Mock navigator.onLine
+const mockNavigatorOnLine = vi.fn(() => true);
 Object.defineProperty(navigator, 'onLine', {
-  writable: true,
-  value: true,
+  get: mockNavigatorOnLine,
+  configurable: true,
 });
 
 describe('API Utils', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    navigator.onLine = true;
+    mockNavigatorOnLine.mockReturnValue(true);
     vi.useFakeTimers();
   });
 
@@ -310,8 +311,7 @@ describe('API Utils', () => {
           })
           .mockResolvedValueOnce(createMockResponse({ success: true }));
 
-        const startTime = Date.now();
-        await apiClient.get('/test', { retries: 1, retryDelay: 100 });
+        await apiClient.get('/test', { retries: 1 });
         
         // Fast-forward timers to simulate delay
         vi.advanceTimersByTime(100);
@@ -406,19 +406,19 @@ describe('API Utils', () => {
   describe('Utility Functions', () => {
     describe('isOnline', () => {
       it('returns true when online', () => {
-        navigator.onLine = true;
+        mockNavigatorOnLine.mockReturnValue(true);
         expect(isOnline()).toBe(true);
       });
 
       it('returns false when offline', () => {
-        navigator.onLine = false;
+        mockNavigatorOnLine.mockReturnValue(false);
         expect(isOnline()).toBe(false);
       });
     });
 
     describe('waitForOnline', () => {
       it('resolves immediately when already online', async () => {
-        navigator.onLine = true;
+        mockNavigatorOnLine.mockReturnValue(true);
         
         const promise = waitForOnline();
         
@@ -426,13 +426,13 @@ describe('API Utils', () => {
       });
 
       it('waits for online event when offline', async () => {
-        navigator.onLine = false;
+        mockNavigatorOnLine.mockReturnValue(false);
         
         const promise = waitForOnline();
         
         // Simulate going online
         setTimeout(() => {
-          navigator.onLine = true;
+          mockNavigatorOnLine.mockReturnValue(true);
           window.dispatchEvent(new Event('online'));
         }, 100);
         

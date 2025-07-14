@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useWhoisLookup } from './useWhoisLookup';
 import { ProcessingStatus, RiskLevel } from '../types/whois';
-import { createMockResponse, mockWhoisReport, mockApiResponse } from '../test/setup';
+import { mockWhoisReport, mockApiResponse } from '../test/setup';
 import * as apiUtils from '../utils/api';
 
 // Mock the API module
@@ -24,7 +24,7 @@ describe('useWhoisLookup', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsOnline.mockReturnValue(true);
-    global.fetch = vi.fn();
+    (globalThis as any).fetch = vi.fn();
   });
 
   afterEach(() => {
@@ -300,7 +300,6 @@ describe('useWhoisLookup', () => {
       });
 
       const { result } = renderHook(() => useWhoisLookup());
-      const progressValues: number[] = [];
 
       await act(async () => {
         const promise = result.current.lookupDomain('https://example.com');
@@ -361,7 +360,9 @@ describe('useWhoisLookup', () => {
     it('handles API response without data', async () => {
       mockApiClient.post.mockResolvedValue({
         success: false,
-        error: 'Domain not found'
+        error: 'Domain not found',
+        timestamp: '2024-01-01T12:00:00Z',
+        requestId: 'test-request-id'
       });
       const { result } = renderHook(() => useWhoisLookup());
 

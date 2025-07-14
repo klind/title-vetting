@@ -1,4 +1,3 @@
-import React from 'react';
 import type { WhoisReport as WhoisReportType, RiskAssessment } from '../types/whois';
 import { RiskLevel } from '../types/whois';
 
@@ -60,24 +59,6 @@ export function WhoisReport({
         );
       default:
         return null;
-    }
-  };
-
-  /**
-   * Formats date for display
-   */
-  const formatDate = (dateString?: string): string => {
-    if (!dateString) return 'Not available';
-    
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-    } catch {
-      return dateString;
     }
   };
 
@@ -145,24 +126,6 @@ export function WhoisReport({
             </>
           )}
         </dd>
-      </div>
-    );
-  };
-
-  /**
-   * Renders a section of fields
-   */
-  const renderSection = (title: string, data: any, fields: Array<{ key: string; label: string; options?: any }>) => {
-    const hasData = fields.some(field => data[field.key] !== undefined && data[field.key] !== null && data[field.key] !== '');
-    
-    if (!hasData) return null;
-
-    return (
-      <div className="space-y-3">
-        <h4 className="font-medium text-gray-700 border-b border-gray-200 pb-2">{title}</h4>
-        <div className="space-y-2">
-          {fields.map(field => renderField(field.label, data[field.key], field.options))}
-        </div>
       </div>
     );
   };
