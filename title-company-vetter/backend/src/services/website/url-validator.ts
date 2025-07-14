@@ -17,7 +17,7 @@ const SUSPICIOUS_PATTERNS = [
   /xn--/, // Punycode domains
   /[а-я]/, // Cyrillic characters
   /[αβγδεζηθικλμνξοπρστυφχψω]/, // Greek characters
-  /bit\.ly|tinyurl|t\.co|goo\.gl|short/, // URL shorteners
+  /^(bit\.ly|tinyurl\.com|t\.co|goo\.gl|short\.link)$/, // URL shorteners
   /[.-]{2,}/, // Multiple consecutive dots or dashes
   /^www\d+\./, // Numbered subdomains
 ];

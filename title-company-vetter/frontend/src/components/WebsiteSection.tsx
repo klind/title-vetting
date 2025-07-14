@@ -7,37 +7,10 @@ interface WebsiteSectionProps {
 }
 
 const WebsiteSection: React.FC<WebsiteSectionProps> = ({ data, className = '' }) => {
-  const getStatusIcon = (isAccessible: boolean, hasWebsite: boolean) => {
-    if (!hasWebsite) {
-      return <span className="text-red-400 text-xl">❌</span>;
-    }
-    if (isAccessible) {
-      return <span className="text-green-400 text-xl">✅</span>;
-    }
-    return <span className="text-yellow-400 text-xl">⚠️</span>;
-  };
-
-  const getStatusText = (isAccessible: boolean, hasWebsite: boolean) => {
-    if (!hasWebsite) {
-      return { text: 'No Website Found', color: 'text-red-400' };
-    }
-    if (isAccessible) {
-      return { text: 'Website Accessible', color: 'text-green-400' };
-    }
-    return { text: 'Website Issues', color: 'text-yellow-400' };
-  };
-
-  const status = getStatusText(data.isAccessible, data.hasWebsite);
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Website Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-orange-400">
-          Website Validation
-        </h3>
 
-      </div>
 
       {/* Website Information */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -146,16 +119,11 @@ const WebsiteSection: React.FC<WebsiteSectionProps> = ({ data, className = '' })
                   Email Addresses ({data.contacts.emails.length})
                 </h5>
                 <div className="space-y-1">
-                  {data.contacts.emails.slice(0, 5).map((email, index) => (
+                  {data.contacts.emails.map((email, index) => (
                     <div key={index} className="text-xs text-blue-400 font-mono break-all">
                       {email}
                     </div>
                   ))}
-                  {data.contacts.emails.length > 5 && (
-                    <div className="text-xs text-gray-400">
-                      ...and {data.contacts.emails.length - 5} more
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -167,16 +135,11 @@ const WebsiteSection: React.FC<WebsiteSectionProps> = ({ data, className = '' })
                   Phone Numbers ({data.contacts.phones.length})
                 </h5>
                 <div className="space-y-1">
-                  {data.contacts.phones.slice(0, 5).map((phone, index) => (
+                  {data.contacts.phones.map((phone, index) => (
                     <div key={index} className="text-xs text-green-400 font-mono">
                       {phone}
                     </div>
                   ))}
-                  {data.contacts.phones.length > 5 && (
-                    <div className="text-xs text-gray-400">
-                      ...and {data.contacts.phones.length - 5} more
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -188,16 +151,11 @@ const WebsiteSection: React.FC<WebsiteSectionProps> = ({ data, className = '' })
                   Addresses ({data.contacts.addresses.length})
                 </h5>
                 <div className="space-y-1">
-                  {data.contacts.addresses.slice(0, 3).map((address, index) => (
+                  {data.contacts.addresses.map((address, index) => (
                     <div key={index} className="text-xs text-yellow-400 break-words">
                       {address}
                     </div>
                   ))}
-                  {data.contacts.addresses.length > 3 && (
-                    <div className="text-xs text-gray-400">
-                      ...and {data.contacts.addresses.length - 3} more
-                    </div>
-                  )}
                 </div>
               </div>
             )}

@@ -44,27 +44,68 @@ export class ContactExtractor {
     const scripts = document.querySelectorAll('script, style, noscript');
     scripts.forEach(script => script.remove());
 
-    // Get all text content
+    // Get text content for phone/address extraction (still needed for these)
     const textContent = document.body?.textContent || '';
 
-    // Extract contact information
-    const emails = this.extractEmails(textContent);
+    // Start with empty arrays and use comprehensive extraction
+    let emails: string[] = [];
     const phones = this.extractPhones(textContent);
     const addresses = this.extractAddresses(textContent);
 
-    // Also check specific contact-related elements
+    // Extract from structured email elements first (most reliable)
+    const emailElements = document.querySelectorAll(
+      '.email, .e-mail, [class*="email"], [id*="email"], [data-email], span[class*="mail"], div[class*="mail"]'
+    );
+    
+    console.log(`📧 Found ${emailElements.length} email elements`);
+    
+    emailElements.forEach(element => {
+      const elementText = element.textContent?.trim() || '';
+      console.log(`📧 Checking email element: "${elementText}"`);
+      if (elementText && this.isValidCleanEmail(elementText) && !emails.includes(elementText)) {
+        console.log(`✅ Added email from element: ${elementText}`);
+        emails.push(elementText);
+      }
+    });
+
+    // Extract from comprehensive methods (will include mailto, labels, etc.)
+    const extractedEmails = this.extractEmails(textContent, html);
+    console.log(`📧 extractEmails found: ${extractedEmails.length} emails`);
+    extractedEmails.forEach(email => {
+      if (!emails.includes(email)) {
+        console.log(`✅ Added email from extraction: ${email}`);
+        emails.push(email);
+      }
+    });
+
+    // Extract from phone-specific elements
+    const phoneElements = document.querySelectorAll(
+      '.phone, .tel, .telephone, [class*="phone"], [id*="phone"], [data-phone]'
+    );
+    
+    phoneElements.forEach(element => {
+      const elementText = element.textContent?.trim() || '';
+      if (elementText) {
+        const phoneMatches = this.extractPhones(elementText);
+        phoneMatches.forEach(phone => {
+          if (!phones.includes(phone)) phones.push(phone);
+        });
+      }
+    });
+
+    // Also check specific contact-related elements and links
     const contactElements = document.querySelectorAll(
-      'a[href^="mailto:"], a[href^="tel:"], .contact, .phone, .email, [class*="contact"], [id*="contact"]'
+      'a[href^="mailto:"], a[href^="tel:"], .contact, [class*="contact"], [id*="contact"]'
     );
 
     contactElements.forEach(element => {
       const elementText = element.textContent || '';
       const href = element.getAttribute('href') || '';
 
-      // Extract from mailto links
+      // Extract from mailto links (enhanced)
       if (href.startsWith('mailto:')) {
-        const email = href.replace('mailto:', '').split('?')[0];
-        if (this.isValidEmail(email) && !emails.includes(email)) {
+        const email = href.replace('mailto:', '').split('?')[0].trim();
+        if (this.isValidCleanEmail(email) && !emails.includes(email)) {
           emails.push(email);
         }
       }
@@ -77,21 +118,27 @@ export class ContactExtractor {
         }
       }
 
-      // Extract from contact element text
-      const elementEmails = this.extractEmails(elementText);
-      const elementPhones = this.extractPhones(elementText);
-
+      // Extract additional emails from contact element text
+      const elementEmails = this.extractEmails(elementText, element.outerHTML);
       elementEmails.forEach(email => {
-        if (!emails.includes(email)) emails.push(email);
+        if (!emails.includes(email)) {
+          console.log(`✅ Added email from contact element: ${email}`);
+          emails.push(email);
+        }
       });
 
+      // Extract phones from contact elements
+      const elementPhones = this.extractPhones(elementText);
       elementPhones.forEach(phone => {
         if (!phones.includes(phone)) phones.push(phone);
       });
     });
 
+    const finalEmails = [...new Set(emails)];
+    console.log(`📧 Final email extraction results: ${finalEmails.length} emails found: ${finalEmails.join(', ')}`);
+    
     return {
-      emails: [...new Set(emails)], // Remove duplicates
+      emails: finalEmails,
       phones: [...new Set(phones)], // Remove duplicates
       addresses: [...new Set(addresses)], // Remove duplicates
     };
@@ -323,11 +370,59 @@ export class ContactExtractor {
   }
 
   /**
-   * Extracts emails from text content
+   * Extracts emails from text content and HTML patterns
    */
-  static extractEmails(text: string): string[] {
-    const emails = text.match(this.EMAIL_REGEX) || [];
-    return emails.filter(email => this.isValidEmail(email));
+  static extractEmails(text: string, html?: string): string[] {
+    const emails: string[] = [];
+    
+    // If HTML is provided, use enhanced extraction methods
+    if (html) {
+      // 1. Extract from mailto: links in HTML (most reliable)
+      const mailtoMatches = html.match(/mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi) || [];
+      mailtoMatches.forEach(match => {
+        const email = match.replace(/mailto:/i, '').split('?')[0].trim();
+        if (this.isValidCleanEmail(email) && !emails.includes(email)) {
+          emails.push(email);
+        }
+      });
+
+      // 2. Look for "Email:" pattern in HTML with word boundaries
+      const emailLabelPattern = /\bemail\s*:?\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\b/gi;
+      const emailLabelMatches = html.match(emailLabelPattern) || [];
+      emailLabelMatches.forEach(match => {
+        const emailMatch = match.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i);
+        if (emailMatch && this.isValidCleanEmail(emailMatch[1]) && !emails.includes(emailMatch[1])) {
+          emails.push(emailMatch[1]);
+        }
+      });
+
+      // 3. Extract from structured HTML elements (input fields, spans with email attributes)
+      const structuredEmailPattern = /<(?:input|span|div|td|th)[^>]*(?:name|id|class)="[^"]*email[^"]*"[^>]*>([^<]*@[^<]*)</gi;
+      const structuredMatches = html.match(structuredEmailPattern) || [];
+      structuredMatches.forEach(match => {
+        const emailMatch = match.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i);
+        if (emailMatch && this.isValidCleanEmail(emailMatch[1]) && !emails.includes(emailMatch[1])) {
+          emails.push(emailMatch[1]);
+        }
+      });
+    }
+    
+    // Always try text extraction as fallback (but use clean validation)
+    const textEmailPattern = /\b([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\b/g;
+    const textEmails = text.match(textEmailPattern) || [];
+    console.log(`📧 Text extraction found ${textEmails.length} potential emails: ${textEmails.join(', ')}`);
+    
+    textEmails.forEach(email => {
+      console.log(`📧 Validating text email: ${email}`);
+      if (this.isValidCleanEmail(email) && !emails.includes(email)) {
+        console.log(`✅ Added email from text: ${email}`);
+        emails.push(email);
+      } else {
+        console.log(`❌ Rejected email: ${email} (valid: ${this.isValidCleanEmail(email)}, duplicate: ${emails.includes(email)})`);
+      }
+    });
+    
+    return emails;
   }
 
   /**
@@ -357,11 +452,115 @@ export class ContactExtractor {
   }
 
   /**
+   * Validates email format with targeted checks for concatenated/malformed emails
+   */
+  static isValidCleanEmail(email: string): boolean {
+    // Basic format validation
+    if (!this.isValidEmail(email)) return false;
+    
+    // Check for obvious concatenation patterns in the domain part specifically
+    if (email.includes('.comstewart.') || email.includes('.comservices') || email.includes('.com.com')) {
+      return false;
+    }
+    
+    // Check for phone numbers at the start of email (like "729-1900agencyservices@")
+    if (/^\d{3}-\d{4}/.test(email)) {
+      return false;
+    }
+    
+    // Check for phone number patterns at start of local part (like "8238claims@")
+    // This catches partial phone numbers that got concatenated
+    if (/^\d{4}[a-zA-Z]/.test(email)) {
+      return false;
+    }
+    
+    // Check for excessive length (concatenated emails are often very long)
+    if (email.length > 80) {
+      return false;
+    }
+    
+    // Check for multiple @ symbols
+    const atCount = (email.match(/@/g) || []).length;
+    if (atCount !== 1) {
+      return false;
+    }
+    
+    // Extract the local part (before @) for additional validation
+    const localPart = email.split('@')[0];
+    
+    // Check if local part starts with too many consecutive digits (likely phone number fragment)
+    if (/^\d{3,}/.test(localPart)) {
+      return false;
+    }
+    
+    // Check for very specific concatenation patterns that indicate problems
+    const suspiciousPatterns = [
+      /\d{3}-\d{4}.*@/, // phone numbers before @
+      /@.*@/, // multiple @ symbols  
+      /\.(com|net|org){2,}/i, // repeated domains like .com.com
+      /\.com[a-zA-Z0-9]+\./i // .com followed immediately by alphanumeric then another dot (like .comstewart.)
+    ];
+    
+    for (const pattern of suspiciousPatterns) {
+      if (pattern.test(email)) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  /**
    * Validates phone number format
    */
   static isValidPhone(phone: string): boolean {
     const cleanPhone = phone.replace(/[^\d]/g, '');
-    return cleanPhone.length >= 10 && cleanPhone.length <= 15;
+    
+    // Basic length check
+    if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+      return false;
+    }
+    
+    // Check for malformed patterns
+    if (phone.startsWith('-') || phone.startsWith('.')) {
+      return false;
+    }
+    
+    // For North American numbers (10 digits), validate format
+    if (cleanPhone.length === 10) {
+      const areaCode = cleanPhone.substring(0, 3);
+      const exchange = cleanPhone.substring(3, 6);
+      
+      // Area code cannot start with 0 or 1
+      if (areaCode.startsWith('0') || areaCode.startsWith('1')) {
+        return false;
+      }
+      
+      // Exchange code cannot start with 0 or 1
+      if (exchange.startsWith('0') || exchange.startsWith('1')) {
+        return false;
+      }
+      
+      // Check for obviously invalid patterns like "000" or "111"
+      if (areaCode === '000' || areaCode === '111' || exchange === '000' || exchange === '111') {
+        return false;
+      }
+    }
+    
+    // For 11-digit numbers starting with 1 (North American with country code)
+    if (cleanPhone.length === 11 && cleanPhone.startsWith('1')) {
+      const areaCode = cleanPhone.substring(1, 4);
+      const exchange = cleanPhone.substring(4, 7);
+      
+      // Same validations as above for the area code and exchange
+      if (areaCode.startsWith('0') || areaCode.startsWith('1') || 
+          exchange.startsWith('0') || exchange.startsWith('1') ||
+          areaCode === '000' || areaCode === '111' || exchange === '000' || exchange === '111') {
+        return false;
+      }
+    }
+    
+    return true;
   }
 
   /**

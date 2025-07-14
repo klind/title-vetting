@@ -79,10 +79,23 @@ export class SocialMediaValidator {
    * Generates search terms for social media lookup
    */
   static generateSearchTerms(domain: string, organizationName?: string): string[] {
-    // Only use the base domain as the search term
     const domainParts = domain.split('.');
     const baseDomain = domainParts[0];
-    return [baseDomain];
+    
+    // For title companies, add "title" to search terms for better specificity
+    // This prevents finding celebrities with similar names (e.g., "stewart" -> Rod Stewart)
+    const searchTerms = [
+      `${baseDomain} title`,  // Primary search with "title" for specificity
+      baseDomain              // Fallback to base domain only
+    ];
+    
+    // If organization name is provided, add it as well
+    if (organizationName && organizationName.toLowerCase() !== baseDomain.toLowerCase()) {
+      searchTerms.unshift(`${organizationName} title`);
+      searchTerms.push(organizationName);
+    }
+    
+    return searchTerms;
   }
 
   /**
