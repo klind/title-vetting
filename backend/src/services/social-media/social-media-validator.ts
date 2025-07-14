@@ -2,11 +2,46 @@ import fetch from 'node-fetch';
 import { chromium } from 'playwright';
 
 /**
- * Social Media Validator for checking social media presence
+ * Social Media Validator for checking social media presence with advanced stealth capabilities
  */
 export class SocialMediaValidator {
-  static DEFAULT_TIMEOUT = 10000;
-  static DEFAULT_USER_AGENT = 'Mozilla/5.0 (compatible; TitleCompanyVetter/1.0)';
+  static DEFAULT_TIMEOUT = 15000;
+  
+  // Pool of real Chrome user agents for rotation
+  static USER_AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+  ];
+  
+  // Common viewport sizes to rotate between
+  static VIEWPORT_SIZES = [
+    { width: 1920, height: 1080 },
+    { width: 1366, height: 768 },
+    { width: 1280, height: 720 },
+    { width: 1440, height: 900 },
+    { width: 1536, height: 864 }
+  ];
+  
+  // Timezone options for randomization
+  static TIMEZONES = [
+    'America/New_York',
+    'America/Chicago', 
+    'America/Denver',
+    'America/Los_Angeles',
+    'America/Phoenix'
+  ];
+  
+  // Geolocation coordinates for major US cities
+  static GEOLOCATIONS = [
+    { longitude: -74.006, latitude: 40.7128, city: 'New York' },
+    { longitude: -87.6298, latitude: 41.8781, city: 'Chicago' },
+    { longitude: -118.2437, latitude: 34.0522, city: 'Los Angeles' },
+    { longitude: -95.3698, latitude: 29.7604, city: 'Houston' },
+    { longitude: -75.1652, latitude: 39.9526, city: 'Philadelphia' }
+  ];
 
   /**
    * Validates social media presence for a domain or organization
@@ -23,7 +58,7 @@ export class SocialMediaValidator {
   ) {
     const {
       timeout = this.DEFAULT_TIMEOUT,
-      userAgent = this.DEFAULT_USER_AGENT,
+      userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       checkFollowers = false,
       checkActivity = false
     } = options;
@@ -113,28 +148,98 @@ export class SocialMediaValidator {
     try {
       console.log(`🔍 Starting Playwright Google search for LinkedIn pages: ${searchTerms.join(', ')}`);
       
-      // Launch browser with stealth settings
+      // Launch browser with comprehensive stealth settings
       browser = await chromium.launch({
         headless: true,
         args: [
+          // Core stealth arguments
           '--disable-blink-features=AutomationControlled',
+          '--disable-automation',
           '--disable-web-security',
-          '--disable-features=VizDisplayCompositor'
+          '--disable-features=VizDisplayCompositor',
+          
+          // Additional stealth arguments
+          '--no-first-run',
+          '--no-service-autorun',
+          '--no-default-browser-check',
+          '--password-store=basic',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding',
+          '--disable-features=TranslateUI',
+          '--disable-ipc-flooding-protection',
+          '--disable-hang-monitor',
+          '--disable-prompt-on-repost',
+          '--disable-sync',
+          '--disable-domain-reliability',
+          '--disable-extensions',
+          '--disable-component-extensions-with-background-pages',
+          '--disable-default-apps',
+          '--disable-plugins',
+          '--disable-background-networking',
+          '--disable-plugins-discovery',
+          '--disable-preconnect',
+          
+          // Performance and memory
+          '--memory-pressure-off',
+          '--max_old_space_size=4096',
+          
+          // Media and WebGL
+          '--enable-webgl',
+          '--use-gl=swiftshader',
+          '--enable-accelerated-2d-canvas',
+          
+          // Network and security
+          '--ignore-certificate-errors',
+          '--ignore-ssl-errors=yes',
+          '--ignore-certificate-errors-spki-list',
+          '--ignore-certificate-errors-sp-list'
         ]
       });
       
-      // Create context with US geo-location to avoid GDPR
+      // Create context with randomized fingerprint
+      const randomUserAgent = this.getRandomUserAgent();
+      const randomViewport = this.getRandomViewport();
+      const randomTimezone = this.getRandomTimezone();
+      const randomGeolocation = this.getRandomGeolocation();
+      
+      console.log(`   Using random fingerprint: ${randomGeolocation.city}, ${randomViewport.width}x${randomViewport.height}`);
+      
       const context = await browser.newContext({
         locale: 'en-US',
-        geolocation: { longitude: -74.006, latitude: 40.7128 }, // NYC
+        geolocation: randomGeolocation,
         permissions: ['geolocation'],
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        userAgent: randomUserAgent,
+        viewport: randomViewport,
+        timezoneId: randomTimezone,
+        deviceScaleFactor: Math.random() > 0.5 ? 1 : 2, // Randomize device scale
+        hasTouch: false,
+        isMobile: false,
+        extraHTTPHeaders: {
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1'
+        }
       });
       
       const page = await context.newPage();
       
-      // Set viewport
-      await page.setViewportSize({ width: 1920, height: 1080 });
+      // Remove automation detection signals
+      await this.addStealthScripts(page);
+      
+      // Add realistic browser behavior
+      await page.setExtraHTTPHeaders({
+        'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"',
+        'sec-fetch-dest': 'document',
+        'sec-fetch-mode': 'navigate',
+        'sec-fetch-site': 'none',
+        'sec-fetch-user': '?1'
+      });
       
       // Try each search term
       for (const term of searchTerms) {
@@ -144,14 +249,27 @@ export class SocialMediaValidator {
           // Navigate to Google search with US parameters
           const searchUrl = `https://www.google.com/search?q=linkedin+${encodeURIComponent(term)}&gl=us&hl=en`;
           await page.goto(searchUrl, { waitUntil: 'networkidle', timeout });
+          
+          // Check for bot detection after navigation
+          const hasBotDetection = await this.handleBotDetection(page);
+          if (hasBotDetection) {
+            console.log(`   Bot detection encountered, skipping term: ${term}`);
+            continue;
+          }
+          
+          // Simulate human behavior after page load
+          await this.simulateHumanMovement(page);
+          await this.addRandomDelay(1000, 3000);
           console.log(`   Navigated to: ${searchUrl}`);
           
           // Handle consent if it appears
           const consentButton = page.locator('button:has-text("Accept all")').first();
           if (await consentButton.isVisible()) {
             console.log(`   Accepting Google consent...`);
+            await this.addRandomDelay(1000, 2000); // Delay before clicking
             await consentButton.click();
             await page.waitForLoadState('networkidle');
+            await this.addRandomDelay(1000, 2000); // Delay after clicking
           }
           
           // Wait for search results with multiple possible selectors
@@ -182,8 +300,9 @@ export class SocialMediaValidator {
             continue;
           }
           
-          // Wait a bit for results to load
-          await page.waitForTimeout(2000);
+          // Wait for results to load with human-like behavior
+          await this.addRandomDelay(2000, 4000);
+          await this.simulateScrolling(page);
           
           // Extract LinkedIn URLs from search results
           const linkedinUrls = await this.extractLinkedInUrlsWithPlaywright(page, term);
@@ -203,8 +322,8 @@ export class SocialMediaValidator {
             }
           }
           
-          // Add delay between searches
-          await page.waitForTimeout(2000);
+          // Add realistic delay between searches
+          await this.addRandomDelay(3000, 7000);
         } catch (error) {
           console.log(`⚠️ Playwright LinkedIn search failed for term "${term}": ${error instanceof Error ? error.message : 'Unknown error'}`);
           continue;
@@ -268,7 +387,7 @@ export class SocialMediaValidator {
    */
   static async validateLinkedInUrls(urls: string[], options: any): Promise<string[]> {
     const validUrls: string[] = [];
-    const { timeout = this.DEFAULT_TIMEOUT, userAgent = this.DEFAULT_USER_AGENT } = options;
+    const { timeout = this.DEFAULT_TIMEOUT, userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' } = options;
 
     for (const url of urls) {
       try {
@@ -334,7 +453,7 @@ export class SocialMediaValidator {
    */
   static async validateSocialMediaUrls(urls: string[], options: any): Promise<string[]> {
     const validUrls: string[] = [];
-    const { timeout = this.DEFAULT_TIMEOUT, userAgent = this.DEFAULT_USER_AGENT } = options;
+    const { timeout = this.DEFAULT_TIMEOUT, userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' } = options;
 
     for (const url of urls) {
       try {
@@ -475,21 +594,78 @@ export class SocialMediaValidator {
       browser = await chromium.launch({
         headless: true,
         args: [
+          // Core stealth arguments
           '--disable-blink-features=AutomationControlled',
+          '--disable-automation',
           '--disable-web-security',
-          '--disable-features=VizDisplayCompositor'
+          '--disable-features=VizDisplayCompositor',
+          
+          // Additional stealth arguments
+          '--no-first-run',
+          '--no-service-autorun',
+          '--no-default-browser-check',
+          '--password-store=basic',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding',
+          '--disable-features=TranslateUI',
+          '--disable-ipc-flooding-protection',
+          '--disable-hang-monitor',
+          '--disable-prompt-on-repost',
+          '--disable-sync',
+          '--disable-domain-reliability',
+          '--disable-extensions',
+          '--disable-component-extensions-with-background-pages',
+          '--disable-default-apps',
+          '--disable-plugins',
+          '--disable-background-networking',
+          '--disable-plugins-discovery',
+          '--disable-preconnect',
+          
+          // Performance and memory
+          '--memory-pressure-off',
+          '--max_old_space_size=4096',
+          
+          // Media and WebGL
+          '--enable-webgl',
+          '--use-gl=swiftshader',
+          '--enable-accelerated-2d-canvas',
+          
+          // Network and security
+          '--ignore-certificate-errors',
+          '--ignore-ssl-errors=yes',
+          '--ignore-certificate-errors-spki-list',
+          '--ignore-certificate-errors-sp-list'
         ]
       });
       
+      const randomUserAgent = this.getRandomUserAgent();
+      const randomViewport = this.getRandomViewport();
+      const randomTimezone = this.getRandomTimezone();
+      const randomGeolocation = this.getRandomGeolocation();
+      
       const context = await browser.newContext({
         locale: 'en-US',
-        geolocation: { longitude: -74.006, latitude: 40.7128 },
+        geolocation: randomGeolocation,
         permissions: ['geolocation'],
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        userAgent: randomUserAgent,
+        viewport: randomViewport,
+        timezoneId: randomTimezone,
+        deviceScaleFactor: Math.random() > 0.5 ? 1 : 2,
+        hasTouch: false,
+        isMobile: false,
+        extraHTTPHeaders: {
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1'
+        }
       });
       
       const page = await context.newPage();
-      await page.setViewportSize({ width: 1920, height: 1080 });
+      await this.addStealthScripts(page);
       
       for (const term of searchTerms) {
         try {
@@ -497,12 +673,16 @@ export class SocialMediaValidator {
           
           const searchUrl = `https://www.google.com/search?q=facebook+${encodeURIComponent(term)}&gl=us&hl=en`;
           await page.goto(searchUrl, { waitUntil: 'networkidle', timeout });
+          await this.simulateHumanMovement(page);
+          await this.addRandomDelay(1000, 3000);
           
           // Handle consent if it appears
           const consentButton = page.locator('button:has-text("Accept all")').first();
           if (await consentButton.isVisible()) {
+            await this.addRandomDelay(1000, 2000);
             await consentButton.click();
             await page.waitForLoadState('networkidle');
+            await this.addRandomDelay(1000, 2000);
           }
           
           // Wait for search results
@@ -512,7 +692,8 @@ export class SocialMediaValidator {
             continue;
           }
           
-          await page.waitForTimeout(2000);
+          await this.addRandomDelay(2000, 4000);
+          await this.simulateScrolling(page);
           
           // Extract Facebook URLs
           const facebookUrls = await this.extractFacebookUrls(page, term);
@@ -531,7 +712,7 @@ export class SocialMediaValidator {
             }
           }
           
-          await page.waitForTimeout(2000);
+          await this.addRandomDelay(3000, 7000);
         } catch (error) {
           console.log(`⚠️ Facebook search failed for term "${term}": ${error instanceof Error ? error.message : 'Unknown error'}`);
           continue;
@@ -558,21 +739,78 @@ export class SocialMediaValidator {
       browser = await chromium.launch({
         headless: true,
         args: [
+          // Core stealth arguments
           '--disable-blink-features=AutomationControlled',
+          '--disable-automation',
           '--disable-web-security',
-          '--disable-features=VizDisplayCompositor'
+          '--disable-features=VizDisplayCompositor',
+          
+          // Additional stealth arguments
+          '--no-first-run',
+          '--no-service-autorun',
+          '--no-default-browser-check',
+          '--password-store=basic',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding',
+          '--disable-features=TranslateUI',
+          '--disable-ipc-flooding-protection',
+          '--disable-hang-monitor',
+          '--disable-prompt-on-repost',
+          '--disable-sync',
+          '--disable-domain-reliability',
+          '--disable-extensions',
+          '--disable-component-extensions-with-background-pages',
+          '--disable-default-apps',
+          '--disable-plugins',
+          '--disable-background-networking',
+          '--disable-plugins-discovery',
+          '--disable-preconnect',
+          
+          // Performance and memory
+          '--memory-pressure-off',
+          '--max_old_space_size=4096',
+          
+          // Media and WebGL
+          '--enable-webgl',
+          '--use-gl=swiftshader',
+          '--enable-accelerated-2d-canvas',
+          
+          // Network and security
+          '--ignore-certificate-errors',
+          '--ignore-ssl-errors=yes',
+          '--ignore-certificate-errors-spki-list',
+          '--ignore-certificate-errors-sp-list'
         ]
       });
       
+      const randomUserAgent = this.getRandomUserAgent();
+      const randomViewport = this.getRandomViewport();
+      const randomTimezone = this.getRandomTimezone();
+      const randomGeolocation = this.getRandomGeolocation();
+      
       const context = await browser.newContext({
         locale: 'en-US',
-        geolocation: { longitude: -74.006, latitude: 40.7128 },
+        geolocation: randomGeolocation,
         permissions: ['geolocation'],
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        userAgent: randomUserAgent,
+        viewport: randomViewport,
+        timezoneId: randomTimezone,
+        deviceScaleFactor: Math.random() > 0.5 ? 1 : 2,
+        hasTouch: false,
+        isMobile: false,
+        extraHTTPHeaders: {
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1'
+        }
       });
       
       const page = await context.newPage();
-      await page.setViewportSize({ width: 1920, height: 1080 });
+      await this.addStealthScripts(page);
       
       for (const term of searchTerms) {
         try {
@@ -580,12 +818,16 @@ export class SocialMediaValidator {
           
           const searchUrl = `https://www.google.com/search?q=twitter+${encodeURIComponent(term)}+OR+x.com+${encodeURIComponent(term)}&gl=us&hl=en`;
           await page.goto(searchUrl, { waitUntil: 'networkidle', timeout });
+          await this.simulateHumanMovement(page);
+          await this.addRandomDelay(1000, 3000);
           
           // Handle consent if it appears
           const consentButton = page.locator('button:has-text("Accept all")').first();
           if (await consentButton.isVisible()) {
+            await this.addRandomDelay(1000, 2000);
             await consentButton.click();
             await page.waitForLoadState('networkidle');
+            await this.addRandomDelay(1000, 2000);
           }
           
           // Wait for search results
@@ -595,7 +837,8 @@ export class SocialMediaValidator {
             continue;
           }
           
-          await page.waitForTimeout(2000);
+          await this.addRandomDelay(2000, 4000);
+          await this.simulateScrolling(page);
           
           // Extract Twitter/X URLs
           const twitterUrls = await this.extractTwitterUrls(page, term);
@@ -614,7 +857,7 @@ export class SocialMediaValidator {
             }
           }
           
-          await page.waitForTimeout(2000);
+          await this.addRandomDelay(3000, 7000);
         } catch (error) {
           console.log(`⚠️ Twitter/X search failed for term "${term}": ${error instanceof Error ? error.message : 'Unknown error'}`);
           continue;
@@ -641,21 +884,78 @@ export class SocialMediaValidator {
       browser = await chromium.launch({
         headless: true,
         args: [
+          // Core stealth arguments
           '--disable-blink-features=AutomationControlled',
+          '--disable-automation',
           '--disable-web-security',
-          '--disable-features=VizDisplayCompositor'
+          '--disable-features=VizDisplayCompositor',
+          
+          // Additional stealth arguments
+          '--no-first-run',
+          '--no-service-autorun',
+          '--no-default-browser-check',
+          '--password-store=basic',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding',
+          '--disable-features=TranslateUI',
+          '--disable-ipc-flooding-protection',
+          '--disable-hang-monitor',
+          '--disable-prompt-on-repost',
+          '--disable-sync',
+          '--disable-domain-reliability',
+          '--disable-extensions',
+          '--disable-component-extensions-with-background-pages',
+          '--disable-default-apps',
+          '--disable-plugins',
+          '--disable-background-networking',
+          '--disable-plugins-discovery',
+          '--disable-preconnect',
+          
+          // Performance and memory
+          '--memory-pressure-off',
+          '--max_old_space_size=4096',
+          
+          // Media and WebGL
+          '--enable-webgl',
+          '--use-gl=swiftshader',
+          '--enable-accelerated-2d-canvas',
+          
+          // Network and security
+          '--ignore-certificate-errors',
+          '--ignore-ssl-errors=yes',
+          '--ignore-certificate-errors-spki-list',
+          '--ignore-certificate-errors-sp-list'
         ]
       });
       
+      const randomUserAgent = this.getRandomUserAgent();
+      const randomViewport = this.getRandomViewport();
+      const randomTimezone = this.getRandomTimezone();
+      const randomGeolocation = this.getRandomGeolocation();
+      
       const context = await browser.newContext({
         locale: 'en-US',
-        geolocation: { longitude: -74.006, latitude: 40.7128 },
+        geolocation: randomGeolocation,
         permissions: ['geolocation'],
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        userAgent: randomUserAgent,
+        viewport: randomViewport,
+        timezoneId: randomTimezone,
+        deviceScaleFactor: Math.random() > 0.5 ? 1 : 2,
+        hasTouch: false,
+        isMobile: false,
+        extraHTTPHeaders: {
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1'
+        }
       });
       
       const page = await context.newPage();
-      await page.setViewportSize({ width: 1920, height: 1080 });
+      await this.addStealthScripts(page);
       
       for (const term of searchTerms) {
         try {
@@ -663,12 +963,16 @@ export class SocialMediaValidator {
           
           const searchUrl = `https://www.google.com/search?q=instagram+${encodeURIComponent(term)}&gl=us&hl=en`;
           await page.goto(searchUrl, { waitUntil: 'networkidle', timeout });
+          await this.simulateHumanMovement(page);
+          await this.addRandomDelay(1000, 3000);
           
           // Handle consent if it appears
           const consentButton = page.locator('button:has-text("Accept all")').first();
           if (await consentButton.isVisible()) {
+            await this.addRandomDelay(1000, 2000);
             await consentButton.click();
             await page.waitForLoadState('networkidle');
+            await this.addRandomDelay(1000, 2000);
           }
           
           // Wait for search results
@@ -678,7 +982,8 @@ export class SocialMediaValidator {
             continue;
           }
           
-          await page.waitForTimeout(2000);
+          await this.addRandomDelay(2000, 4000);
+          await this.simulateScrolling(page);
           
           // Extract Instagram URLs
           const instagramUrls = await this.extractInstagramUrls(page, term);
@@ -697,7 +1002,7 @@ export class SocialMediaValidator {
             }
           }
           
-          await page.waitForTimeout(2000);
+          await this.addRandomDelay(3000, 7000);
         } catch (error) {
           console.log(`⚠️ Instagram search failed for term "${term}": ${error instanceof Error ? error.message : 'Unknown error'}`);
           continue;
@@ -768,4 +1073,294 @@ export class SocialMediaValidator {
     
          return assessments;
    }
+
+  /**
+   * Get a random user agent from the pool
+   */
+  static getRandomUserAgent(): string {
+    return this.USER_AGENTS[Math.floor(Math.random() * this.USER_AGENTS.length)];
+  }
+
+  /**
+   * Get a random viewport size
+   */
+  static getRandomViewport() {
+    return this.VIEWPORT_SIZES[Math.floor(Math.random() * this.VIEWPORT_SIZES.length)];
+  }
+
+  /**
+   * Get a random timezone
+   */
+  static getRandomTimezone(): string {
+    return this.TIMEZONES[Math.floor(Math.random() * this.TIMEZONES.length)];
+  }
+
+  /**
+   * Get a random geolocation
+   */
+  static getRandomGeolocation() {
+    return this.GEOLOCATIONS[Math.floor(Math.random() * this.GEOLOCATIONS.length)];
+  }
+
+  /**
+   * Add stealth scripts to remove automation detection
+   */
+  static async addStealthScripts(page: any): Promise<void> {
+    // Remove webdriver property
+    await page.addInitScript(() => {
+      // Remove navigator.webdriver flag
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => undefined,
+      });
+
+      // Remove chrome.runtime
+      if ('chrome' in window) {
+        // @ts-ignore
+        delete window.chrome.runtime;
+      }
+
+      // Override plugins
+      Object.defineProperty(navigator, 'plugins', {
+        get: () => [
+          {
+            0: {
+              type: "application/x-google-chrome-pdf",
+              suffixes: "pdf",
+              description: "Portable Document Format",
+              enabledPlugin: true,
+            },
+            description: "Portable Document Format",
+            filename: "internal-pdf-viewer",
+            length: 1,
+            name: "Chrome PDF Plugin"
+          },
+          {
+            0: {
+              type: "application/pdf",
+              suffixes: "pdf", 
+              description: "",
+              enabledPlugin: true,
+            },
+            description: "",
+            filename: "mhjfbmdgcfjbbpaeojofohoefgiehjai",
+            length: 1,
+            name: "Chrome PDF Viewer"
+          }
+        ],
+      });
+
+      // Override languages
+      Object.defineProperty(navigator, 'languages', {
+        get: () => ['en-US', 'en'],
+      });
+
+      // Override hardware concurrency
+      Object.defineProperty(navigator, 'hardwareConcurrency', {
+        get: () => 4,
+      });
+
+      // Override memory
+      Object.defineProperty(navigator, 'deviceMemory', {
+        get: () => 8,
+      });
+
+      // Override permissions
+      const originalQuery = window.navigator.permissions.query;
+      window.navigator.permissions.query = (parameters: any) => (
+        parameters.name === 'notifications' ?
+          Promise.resolve({ state: Notification.permission } as any) :
+          originalQuery(parameters)
+      );
+
+      // Override screen properties
+      Object.defineProperty(screen, 'colorDepth', {
+        get: () => 24,
+      });
+
+      Object.defineProperty(screen, 'pixelDepth', {
+        get: () => 24,
+      });
+    });
+  }
+
+  /**
+   * Add human-like delays between actions
+   */
+  static async addRandomDelay(min: number = 2000, max: number = 5000): Promise<void> {
+    const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+
+  /**
+   * Simulate human-like mouse movement
+   */
+  static async simulateHumanMovement(page: any): Promise<void> {
+    // Random mouse movements to simulate human behavior
+    const movements = Math.floor(Math.random() * 3) + 1;
+    
+    for (let i = 0; i < movements; i++) {
+      const x = Math.floor(Math.random() * 800) + 100;
+      const y = Math.floor(Math.random() * 600) + 100;
+      
+      await page.mouse.move(x, y, { steps: Math.floor(Math.random() * 5) + 5 });
+      await this.addRandomDelay(500, 1500);
+    }
+  }
+
+  /**
+   * Simulate realistic page scrolling
+   */
+  static async simulateScrolling(page: any): Promise<void> {
+    // Random scroll to simulate reading behavior
+    const scrollAmount = Math.floor(Math.random() * 500) + 200;
+    
+    await page.evaluate((amount: number) => {
+      window.scrollBy({
+        top: amount,
+        left: 0,
+        behavior: 'smooth'
+      });
+    }, scrollAmount);
+    
+    await this.addRandomDelay(1000, 3000);
+  }
+
+  /**
+   * Enhanced retry logic with exponential backoff for bot detection
+   */
+  static async retryWithBackoff<T>(
+    operation: () => Promise<T>,
+    maxRetries: number = 3,
+    baseDelay: number = 5000
+  ): Promise<T> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        if (attempt > 0) {
+          // Exponential backoff with jitter
+          const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 2000;
+          console.log(`   Retry attempt ${attempt + 1}/${maxRetries} after ${Math.round(delay)}ms`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        
+        return await operation();
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Unknown error');
+        console.log(`   Attempt ${attempt + 1} failed: ${lastError.message}`);
+        
+        // Check if this is likely a bot detection error
+        if (this.isBotDetectionError(lastError)) {
+          console.log(`   Bot detection suspected, using longer backoff`);
+          await this.addRandomDelay(10000, 20000); // Longer delay for bot detection
+        }
+      }
+    }
+    
+    throw lastError || new Error('All retry attempts failed');
+  }
+
+  /**
+   * Detect if an error is likely due to bot detection
+   */
+  static isBotDetectionError(error: Error): boolean {
+    const errorMessage = error.message.toLowerCase();
+    const botDetectionKeywords = [
+      'timeout',
+      'connection',
+      'network',
+      'captcha',
+      'blocked',
+      'access denied',
+      'forbidden',
+      'too many requests',
+      'rate limit',
+      'suspicious',
+      'automation detected'
+    ];
+    
+    return botDetectionKeywords.some(keyword => errorMessage.includes(keyword));
+  }
+
+  /**
+   * Check if page indicates bot detection and take appropriate action
+   */
+  static async handleBotDetection(page: any): Promise<boolean> {
+    try {
+      // Check for common bot detection indicators
+      const botDetectionSelectors = [
+        'text=Access denied',
+        'text=Captcha',
+        'text=Please verify',
+        'text=Too many requests',
+        'text=Unusual traffic',
+        '[id*="captcha"]',
+        '[class*="captcha"]',
+        '[id*="challenge"]',
+        '[class*="challenge"]'
+      ];
+      
+      for (const selector of botDetectionSelectors) {
+        if (await page.locator(selector).isVisible({ timeout: 2000 }).catch(() => false)) {
+          console.log(`   Bot detection detected: ${selector}`);
+          
+          // Take a screenshot for debugging
+          const timestamp = Date.now();
+          await page.screenshot({ 
+            path: `bot-detection-${timestamp}.png`,
+            fullPage: true 
+          });
+          console.log(`   Screenshot saved: bot-detection-${timestamp}.png`);
+          
+          return true;
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.log(`   Error checking for bot detection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return false;
+    }
+  }
+
+  /**
+   * Enhanced error recovery with adaptive strategies
+   */
+  static async recoverFromError(page: any, error: Error): Promise<boolean> {
+    try {
+      console.log(`   Attempting error recovery from: ${error.message}`);
+      
+      // Check if page is still accessible
+      const isAccessible = await page.evaluate(() => document.readyState).catch(() => false);
+      if (!isAccessible) {
+        console.log(`   Page not accessible, cannot recover`);
+        return false;
+      }
+      
+      // Check for bot detection
+      const hasBotDetection = await this.handleBotDetection(page);
+      if (hasBotDetection) {
+        // If bot detection is present, wait longer and try a different approach
+        await this.addRandomDelay(15000, 30000);
+        
+        // Try to refresh the page with new fingerprint
+        await page.reload({ waitUntil: 'networkidle' });
+        await this.simulateHumanMovement(page);
+        await this.addRandomDelay(3000, 6000);
+        
+        return true;
+      }
+      
+      // For network errors, wait and retry
+      if (this.isBotDetectionError(error)) {
+        await this.addRandomDelay(5000, 10000);
+        return true;
+      }
+      
+      return false;
+    } catch (recoveryError) {
+      console.log(`   Error recovery failed: ${recoveryError instanceof Error ? recoveryError.message : 'Unknown error'}`);
+      return false;
+    }
+  }
  } 
