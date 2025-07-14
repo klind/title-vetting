@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import UrlInput from './components/UrlInput';
 import LoadingSpinner from './components/LoadingSpinner';
-
-interface WhoisData {
-  [key: string]: any;
-}
+import WhoisSection from './components/WhoisSection';
+import WebsiteSection from './components/WebsiteSection';
+import SocialMediaSection from './components/SocialMediaSection';
+import type { CombinedReport } from './types/whois';
 
 const App: React.FC = () => {
   console.log('App component rendering...');
@@ -12,7 +12,7 @@ const App: React.FC = () => {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [whoisData, setWhoisData] = useState<WhoisData | null>(null);
+  const [reportData, setReportData] = useState<CombinedReport | null>(null);
   const [showRawJsonModal, setShowRawJsonModal] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,7 +22,7 @@ const App: React.FC = () => {
 
     setLoading(true);
     setError(null);
-    setWhoisData(null);
+    setReportData(null);
 
     try {
       // Add protocol if missing
@@ -32,7 +32,7 @@ const App: React.FC = () => {
       }
 
       console.log('Making API call to:', fullUrl);
-      const response = await fetch('http://localhost:3001/whois', {
+      const response = await fetch('http://localhost:3001/combined', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -58,9 +58,9 @@ const App: React.FC = () => {
       }
       
       // Extract the actual data from the response
-      const whoisData = data.data || data;
-      console.log('Processed WHOIS data:', whoisData);
-      setWhoisData(whoisData);
+      const combinedReport = data.data || data;
+      console.log('Processed combined report:', combinedReport);
+      setReportData(combinedReport);
     } catch (err) {
       console.error('API error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -69,129 +69,43 @@ const App: React.FC = () => {
     }
   };
 
-  // Component to render ALL data dynamically from any JSON structure
-  const renderReport = (data: WhoisData): React.ReactElement => {
-    const renderKeyValue = (key: string, value: any, depth: number = 0): React.ReactElement | null => {
-      if (value === null || value === undefined) return null;
-      
-      if (typeof value === 'object' && !Array.isArray(value)) {
-        // Handle nested objects - recursively render all nested fields
-        const nestedItems = Object.entries(value).map(([nestedKey, nestedValue]) => 
-          renderKeyValue(`${key}.${nestedKey}`, nestedValue, depth + 1)
-        ).filter(Boolean);
-        
-        if (nestedItems.length === 0) return null;
-        
-        return (
-          <div key={key} className="space-y-1">
-            {nestedItems}
-          </div>
-        );
-      } else if (Array.isArray(value)) {
-        // Handle arrays - show all array items
-        if (value.length === 0) return null;
-        
-        return (
-          <div key={key} className="py-1">
-            <span className="text-sm text-gray-400">{key}:</span>
-            <div className="ml-4 mt-1">
-              {value.map((item, index) => (
-                <div key={index} className="text-sm text-white font-mono">
-                  {typeof item === 'object' ? JSON.stringify(item) : String(item)}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      } else {
-        // Handle simple values
-        let displayValue = String(value);
-        
-        // Format dates if they look like dates
-        if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}/)) {
-          try {
-            const date = new Date(value);
-            displayValue = date.toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            });
-          } catch {
-            // Keep original value if date parsing fails
-          }
-        }
-        
-        return (
-          <div key={key} className="flex justify-between items-center py-1">
-            <span className="text-sm text-gray-400">{key}:</span>
-            <span className="text-sm text-white font-mono max-w-xs truncate" title={String(value)}>
-              {displayValue}
-            </span>
-          </div>
-        );
-      }
-    };
-
-    // Recursively flatten the entire data object to get ALL fields
-    const flattenObject = (obj: any, prefix: string = ''): Array<{ key: string; value: any }> => {
-      const result: Array<{ key: string; value: any }> = [];
-      
-      for (const [key, value] of Object.entries(obj)) {
-        const newKey = prefix ? `${prefix}.${key}` : key;
-        
-        if (value !== null && value !== undefined && typeof value === 'object' && !Array.isArray(value)) {
-          // Recursively flatten nested objects
-          result.push(...flattenObject(value, newKey));
-        } else {
-          // Add simple values and arrays
-          result.push({ key: newKey, value });
-        }
-      }
-      
-      return result;
-    };
-
-    // Get ALL data from the response, regardless of structure
-    const allData = flattenObject(data);
-    
-    // Split all data into two columns
-    const midPoint = Math.ceil(allData.length / 2);
-    const leftColumn = allData.slice(0, midPoint);
-    const rightColumn = allData.slice(midPoint);
+  // Expandable Section Component
+  const ExpandableSection: React.FC<{
+    title: string;
+    children: React.ReactNode;
+    defaultOpen?: boolean;
+  }> = ({ title, children, defaultOpen = false }) => {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
 
     return (
-      <>
-        {/* Left Column - First half of ALL data */}
-        <div className="space-y-4">
-          <div className="bg-gray-800 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-orange-400 mb-3">
-              All Data (Part 1) - {leftColumn.length} fields
-            </h3>
-            <div className="space-y-1">
-              {leftColumn.map(({ key, value }) => renderKeyValue(key, value))}
-            </div>
+      <div className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full px-6 py-4 text-left bg-gray-800 hover:bg-gray-750 transition-colors duration-200 flex items-center justify-between"
+        >
+          <h2 className="text-xl font-semibold text-orange-400">{title}</h2>
+          <svg
+            className={`w-5 h-5 text-orange-400 transform transition-transform duration-200 ${
+              isOpen ? 'rotate-180' : ''
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {isOpen && (
+          <div className="px-6 py-4">
+            {children}
           </div>
-        </div>
-
-        {/* Right Column - Second half of ALL data */}
-        <div className="space-y-4">
-          <div className="bg-gray-800 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-orange-400 mb-3">
-              All Data (Part 2) - {rightColumn.length} fields
-            </h3>
-            <div className="space-y-1">
-              {rightColumn.map(({ key, value }) => renderKeyValue(key, value))}
-            </div>
-          </div>
-        </div>
-      </>
+        )}
+      </div>
     );
   };
 
   // Modal component for raw JSON
-  const RawJsonModal: React.FC<{ isOpen: boolean; onClose: () => void; data: WhoisData }> = ({ 
+  const RawJsonModal: React.FC<{ isOpen: boolean; onClose: () => void; data: CombinedReport }> = ({ 
     isOpen, 
     onClose, 
     data 
@@ -222,132 +136,121 @@ const App: React.FC = () => {
     );
   };
 
-  // ExpandableSection component
-  const ExpandableSection: React.FC<{
-    title: string;
-    children: React.ReactNode;
-    defaultOpen?: boolean;
-  }> = ({ title, children, defaultOpen = false }) => {
-    const [open, setOpen] = useState(defaultOpen);
-    return (
-      <div className="mb-6 bg-gray-900 rounded-lg overflow-hidden border border-gray-800">
-        <button
-          className="w-full flex items-center justify-between px-6 py-4 text-left focus:outline-none focus:ring-2 focus:ring-orange-400 group bg-gray-900 hover:bg-gray-800 transition-colors"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-        >
-          <span className="text-xl font-semibold text-orange-400">{title}</span>
-          <svg
-            className={`w-6 h-6 text-orange-400 transform transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-        {open && <div className="px-6 pb-6 pt-2">{children}</div>}
-      </div>
-    );
-  };
-
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Test message to verify rendering */}
-          <div className="text-center mb-4 p-4 bg-green-900/20 border border-green-500 rounded-lg">
-            <p className="text-green-300">React is rendering! App component loaded successfully.</p>
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent mb-4">
+            Title Company Vetter
+          </h1>
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+            Comprehensive domain analysis for title companies. Get WHOIS data, website validation, and social media presence in one report.
+          </p>
+        </div>
+
+        {/* URL Input Form */}
+        <div className="max-w-2xl mx-auto mb-8">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <UrlInput
+              value={url}
+              onChange={setUrl}
+              disabled={loading}
+              placeholder="Enter domain or URL (e.g., pattentitle.com)"
+            />
+            <button
+              type="submit"
+              disabled={loading || !url.trim()}
+              className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:hover:scale-100"
+            >
+              {loading ? (
+                                 <div className="flex items-center justify-center">
+                   <LoadingSpinner />
+                   <span className="ml-2">Analyzing Domain...</span>
+                 </div>
+              ) : (
+                'Analyze Domain'
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 mb-6 max-w-4xl mx-auto">
+            <div className="flex items-center">
+              <div className="text-red-400 font-semibold">Error:</div>
+              <div className="ml-2 text-red-300">{error}</div>
+            </div>
           </div>
-          
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-orange-400 mb-2">
-              Title Company Vetter
-            </h1>
-            <p className="text-gray-400">
-              Comprehensive domain validation and risk assessment
+        )}
+
+        {/* Results */}
+        {reportData && (
+          <div className="max-w-6xl mx-auto space-y-6">
+            {/* WHOIS Report Section */}
+            <ExpandableSection title="WHOIS Report" defaultOpen>
+              <WhoisSection data={reportData.data.whois} />
+            </ExpandableSection>
+
+            {/* Website Validation Section */}
+            <ExpandableSection title="Website Validation" defaultOpen>
+              <WebsiteSection data={reportData.data.website} />
+            </ExpandableSection>
+
+            {/* Social Media Section */}
+            <ExpandableSection title="Social Media Analysis" defaultOpen>
+              <SocialMediaSection data={reportData.data.socialMedia} />
+            </ExpandableSection>
+
+            {/* Risk Factors Section */}
+            {reportData.riskFactors && reportData.riskFactors.length > 0 && (
+              <ExpandableSection title="Risk Assessment" defaultOpen>
+                <div className="bg-red-900/20 border border-red-500 rounded-lg p-4">
+                  <h4 className="text-lg font-semibold text-red-400 mb-3">Risk Factors Identified</h4>
+                  <ul className="space-y-2">
+                    {reportData.riskFactors.map((factor, index) => (
+                      <li key={index} className="flex items-start space-x-2 text-red-300">
+                        <span className="text-red-400 mt-1">⚠️</span>
+                        <span>{factor}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </ExpandableSection>
+            )}
+
+            {/* Raw JSON Button */}
+            <div className="text-center">
+              <button
+                onClick={() => setShowRawJsonModal(true)}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-colors duration-200 font-medium"
+              >
+                View Raw JSON Data
+              </button>
+            </div>
+
+            {/* Raw JSON Modal */}
+            {showRawJsonModal && (
+              <RawJsonModal
+                isOpen={showRawJsonModal}
+                onClose={() => setShowRawJsonModal(false)}
+                data={reportData}
+              />
+            )}
+          </div>
+        )}
+
+        {/* No Results Message */}
+        {!reportData && !loading && !error && (
+          <div className="text-center text-gray-400 max-w-2xl mx-auto">
+            <div className="text-6xl mb-4">🔍</div>
+            <p className="text-lg">
+              Enter a domain above to start your comprehensive analysis. 
+              We'll provide detailed WHOIS information, website validation, and social media presence data.
             </p>
           </div>
-
-          {/* Input Form */}
-          <div className="bg-gray-900 rounded-lg p-6 mb-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <UrlInput
-                value={url}
-                onChange={setUrl}
-                placeholder="Enter domain name (e.g., legacytitleok.com)"
-                disabled={loading}
-              />
-              <button
-                type="submit"
-                disabled={loading || !url.trim()}
-                className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
-              >
-                {loading ? (
-                  <div className="flex items-center justify-center">
-                    <LoadingSpinner />
-                    <span className="ml-2">Vetting Domain...</span>
-                  </div>
-                ) : (
-                  'Vet Title Company'
-                )}
-              </button>
-            </form>
-          </div>
-
-          {/* Error Display */}
-          {error && (
-            <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 mb-6">
-              <div className="flex items-center">
-                <div className="text-red-400 font-semibold">Error:</div>
-                <div className="ml-2 text-red-300">{error}</div>
-              </div>
-            </div>
-          )}
-
-          {/* Expandable Sections */}
-          <ExpandableSection title="Domain Validation (WHOIS)" defaultOpen>
-            {whoisData ? (
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-orange-400">
-                    WHOIS Report
-                  </h2>
-                  <div className="text-sm text-gray-400">
-                    Domain: {whoisData.domain || 'Unknown'}
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {renderReport(whoisData)}
-                </div>
-                <div className="text-center mt-6">
-                  <button
-                    onClick={() => setShowRawJsonModal(true)}
-                    className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-colors duration-200 font-medium"
-                  >
-                    View Raw JSON Data
-                  </button>
-                </div>
-                {showRawJsonModal && (
-                  <RawJsonModal
-                    isOpen={showRawJsonModal}
-                    onClose={() => setShowRawJsonModal(false)}
-                    data={whoisData}
-                  />
-                )}
-              </div>
-            ) : (
-              <div className="text-gray-400">No WHOIS data yet. Submit a domain above to see results.</div>
-            )}
-          </ExpandableSection>
-          <ExpandableSection title="Website Validation">
-            <div className="text-gray-400">Website validation results will appear here in the future.</div>
-          </ExpandableSection>
-          <ExpandableSection title="Social Media">
-            <div className="text-gray-400">Social media validation results will appear here in the future.</div>
-          </ExpandableSection>
-        </div>
+        )}
       </div>
     </div>
   );

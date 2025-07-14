@@ -96,6 +96,84 @@ export interface WhoisReport {
 }
 
 /**
+ * Website validation result structure
+ */
+export interface WebsiteValidation {
+  hasWebsite: boolean;
+  isAccessible: boolean;
+  statusCode?: number;
+  contentType?: string;
+  title?: string;
+  responseTime?: number;
+  redirectUrl?: string;
+  contacts?: {
+    emails: string[];
+    phones: string[];
+    addresses: string[];
+  };
+  ssl?: {
+    hasSSL: boolean;
+    isValid: boolean;
+    isSelfSigned: boolean;
+    error?: string;
+  };
+  hasDns: boolean;
+  error?: string;
+}
+
+/**
+ * Social media validation result structure
+ */
+export interface SocialMediaValidation {
+  profiles?: Array<{
+    platform: string;
+    urls?: string[];
+    exists: boolean;
+    verified: boolean;
+    followers?: number;
+  }>;
+  totalProfiles?: number;
+  verifiedProfiles?: number;
+  hasConsistentPresence?: boolean;
+  credibilityScore?: number;
+  vettingAssessment?: string[];
+  error?: string;
+}
+
+/**
+ * Combined report structure with new API response format
+ */
+export interface CombinedReport {
+  data: {
+    whois: {
+      domain: string;
+      tld: string;
+      ianaServer: string;
+      registryServer: string | null;
+      registrarServer: string | null;
+      parsedData: Record<string, any>;
+      rawData: {
+        iana?: Record<string, any>;
+        registry?: Record<string, any>;
+        registrar?: Record<string, any>;
+      };
+      metadata: {
+        lookupTime: number;
+        source: string;
+        timestamp: string;
+        serversQueried: string[];
+        errors: string[];
+        warnings: string[];
+        totalFields: number;
+      };
+    };
+    website: WebsiteValidation;
+    socialMedia: SocialMediaValidation;
+  };
+  riskFactors: string[];
+}
+
+/**
  * API response wrapper
  */
 export interface ApiResponse<T = any> {
@@ -139,14 +217,16 @@ export interface UrlValidation {
 }
 
 /**
- * Risk level enum for better type safety
+ * Risk level type for better type safety
  */
-export enum RiskLevel {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical',
-}
+export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
+
+export const RiskLevel = {
+  LOW: 'low' as const,
+  MEDIUM: 'medium' as const,
+  HIGH: 'high' as const,
+  CRITICAL: 'critical' as const,
+} as const;
 
 /**
  * Risk assessment for display purposes
@@ -161,14 +241,16 @@ export interface RiskAssessment {
 /**
  * Processing status for multi-step operations
  */
-export enum ProcessingStatus {
-  IDLE = 'idle',
-  VALIDATING = 'validating',
-  FETCHING = 'fetching',
-  PROCESSING = 'processing',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
-}
+export type ProcessingStatus = 'idle' | 'validating' | 'fetching' | 'processing' | 'completed' | 'failed';
+
+export const ProcessingStatus = {
+  IDLE: 'idle' as const,
+  VALIDATING: 'validating' as const,
+  FETCHING: 'fetching' as const,
+  PROCESSING: 'processing' as const,
+  COMPLETED: 'completed' as const,
+  FAILED: 'failed' as const,
+} as const;
 
 /**
  * Extended state for the WHOIS lookup process
@@ -252,14 +334,16 @@ export interface AppState {
 /**
  * Error types for better error handling
  */
-export enum ErrorType {
-  NETWORK_ERROR = 'NETWORK_ERROR',
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
-  API_ERROR = 'API_ERROR',
-  TIMEOUT_ERROR = 'TIMEOUT_ERROR',
-  RATE_LIMIT_ERROR = 'RATE_LIMIT_ERROR',
-  UNKNOWN_ERROR = 'UNKNOWN_ERROR',
-}
+export type ErrorType = 'NETWORK_ERROR' | 'VALIDATION_ERROR' | 'API_ERROR' | 'TIMEOUT_ERROR' | 'RATE_LIMIT_ERROR' | 'UNKNOWN_ERROR';
+
+export const ErrorType = {
+  NETWORK_ERROR: 'NETWORK_ERROR' as const,
+  VALIDATION_ERROR: 'VALIDATION_ERROR' as const,
+  API_ERROR: 'API_ERROR' as const,
+  TIMEOUT_ERROR: 'TIMEOUT_ERROR' as const,
+  RATE_LIMIT_ERROR: 'RATE_LIMIT_ERROR' as const,
+  UNKNOWN_ERROR: 'UNKNOWN_ERROR' as const,
+} as const;
 
 /**
  * Structured error object

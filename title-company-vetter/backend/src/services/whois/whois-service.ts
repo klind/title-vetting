@@ -355,25 +355,33 @@ async function transformWhoisData(
     
     // Create result with separate sections
     const result = {
-      whois: {
-        domain: enhancedData.domain,
-        tld: enhancedData.tld,
-        ianaServer: enhancedData.ianaServer,
-        registryServer: enhancedData.registryServer,
-        registrarServer: enhancedData.registrarServer,
-        parsedData: deduplicatedData,
-        rawData: cleanedRawData,
-        metadata: {
-          lookupTime: Date.now() - startTime,
-          source: 'custom-whois-enhanced',
-          timestamp: new Date().toISOString(),
-          serversQueried: enhancedData.metadata?.serversQueried || [],
-          errors: enhancedData.metadata?.errors || [],
-          warnings: enhancedData.metadata?.warnings || [],
-          totalFields: Object.keys(deduplicatedData).length,
-        }
+      data: {
+        whois: {
+          domain: enhancedData.domain,
+          tld: enhancedData.tld,
+          ianaServer: enhancedData.ianaServer,
+          registryServer: enhancedData.registryServer,
+          registrarServer: enhancedData.registrarServer,
+          parsedData: deduplicatedData,
+          rawData: cleanedRawData,
+          metadata: {
+            lookupTime: Date.now() - startTime,
+            source: 'custom-whois-enhanced',
+            timestamp: new Date().toISOString(),
+            serversQueried: enhancedData.metadata?.serversQueried || [],
+            errors: enhancedData.metadata?.errors || [],
+            warnings: enhancedData.metadata?.warnings || [],
+            totalFields: Object.keys(deduplicatedData).length,
+          }
+        },
+        website: {
+          // Extract all website properties except socialMedia
+          ...Object.fromEntries(
+            Object.entries(websiteValidation).filter(([key]) => key !== 'socialMedia')
+          )
+        },
+        socialMedia: (websiteValidation as any).socialMedia || {}
       },
-      website: websiteValidation,
       riskFactors: riskFactors
     };
     

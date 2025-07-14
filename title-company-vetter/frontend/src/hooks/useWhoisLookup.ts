@@ -1,16 +1,14 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { 
+import type { 
   WhoisReport, 
   WhoisRequest, 
   WhoisLookupState, 
-  ProcessingStatus, 
-  RiskLevel, 
   RiskAssessment,
-  ErrorType,
   AppError,
   ValidationError,
   UseApiHookReturn 
 } from '../types/whois';
+import { ProcessingStatus, RiskLevel, ErrorType } from '../types/whois';
 import { apiClient, formatApiError, isOnline } from '../utils/api';
 
 /**
@@ -40,7 +38,7 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
 } {
   const [state, setState] = useState<WhoisLookupState>(initialState);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
    * Validates URL format and returns validation errors
@@ -240,7 +238,7 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
 
       // Make the API request
       const request: WhoisRequest = { url: url.trim() };
-      const response = await apiClient.post<WhoisReport>('/whois', request);
+      const response = await apiClient.post<WhoisReport>('/combined', request);
 
       if (!response.success || !response.data) {
         throw new Error(response.error || 'Failed to retrieve WHOIS data');

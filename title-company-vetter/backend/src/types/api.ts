@@ -6,7 +6,7 @@ import type { APIGatewayProxyResult } from 'aws-lambda';
  */
 export interface ApiResponse<T = any> {
   success: boolean;
-  whois?: T;
+  data?: T;
   error?: string;
   timestamp: string;
   requestId?: string;
@@ -63,7 +63,7 @@ export function createSuccessResponse<T>(
 ): APIGatewayProxyResult {
   const response: ApiResponse<T> = {
     success: true,
-    whois: data,
+    data: data,
     timestamp: new Date().toISOString(),
     requestId,
   };
@@ -96,7 +96,7 @@ export function createErrorResponse(
 
   // Add details if provided (but don't expose sensitive info in production)
   if (details && process.env.NODE_ENV !== 'production') {
-    response.whois = { details };
+    response.data = { details };
   }
 
   return {
