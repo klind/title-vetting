@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { UrlInput } from './UrlInput';
-import { ValidationError } from '../types/whois';
+import UrlInput from './UrlInput';
+import type { ValidationError } from '../types/whois';
 
 describe('UrlInput', () => {
   const mockOnSubmit = vi.fn();
