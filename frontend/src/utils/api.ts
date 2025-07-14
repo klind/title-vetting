@@ -11,7 +11,7 @@ import {
  * Default API configuration
  */
 const DEFAULT_CONFIG: ApiConfig = {
-  baseUrl: import.meta.env.VITE_API_ENDPOINT || 'http://localhost:3000',
+  baseUrl: import.meta.env.VITE_API_ENDPOINT || 'http://localhost:3001',
   timeout: 30000, // 30 seconds
   retries: 3,
   retryDelay: 1000, // 1 second
