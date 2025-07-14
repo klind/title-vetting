@@ -67,6 +67,7 @@ export class SocialMediaValidator {
 
     const searchTerms = this.generateSearchTerms(domain, organizationName);
     const profiles: any[] = [];
+    const botDetectionMessages: string[] = [];
 
     // Check each platform
     const platformChecks = [
@@ -83,11 +84,25 @@ export class SocialMediaValidator {
         profiles.push(result.value);
       } else {
         const platforms = ['linkedin', 'facebook', 'x', 'instagram'];
+        const errorObj = result.reason;
+        const errorMessage = errorObj instanceof Error ? errorObj.message : String(errorObj);
+
+        // Check if this is a bot detection error
+        if (this.isBotDetectionError(errorObj) || errorMessage.toLowerCase().includes('bot detection')) {
+          const platformName = platforms[index].charAt(0).toUpperCase() + platforms[index].slice(1);
+          // Clean up the error message to avoid duplication
+          let cleanMessage = errorMessage;
+          if (cleanMessage.toLowerCase().includes('try again later')) {
+            cleanMessage = cleanMessage.replace(/\.\s*try again later\.?$/i, '');
+          }
+          botDetectionMessages.push(`${platformName} bot detection: ${cleanMessage}`);
+        }
+
         profiles.push({
           platform: platforms[index],
           exists: false,
           verified: false,
-          error: result.reason?.message || 'Unknown error'
+          error: errorMessage
         });
       }
     });
@@ -95,17 +110,25 @@ export class SocialMediaValidator {
     const totalProfiles = profiles.filter(p => p.exists).length;
     const hasConsistentPresence = totalProfiles >= 2; // At least 2 platforms
     const credibilityScore = this.calculateCredibilityScore(profiles);
-    const vettingAssessment = this.generateVettingAssessment(profiles, totalProfiles);
+    const vettingAssessment = this.generateVettingAssessment(profiles, totalProfiles, botDetectionMessages);
 
-    console.log(`✅ Social media validation complete: ${totalProfiles} profiles found`);
+    // Summary logging
+    if (botDetectionMessages.length > 0) {
+      console.log(`⚠️ Bot detection encountered on ${botDetectionMessages.length} platforms`);
+    } else {
+      console.log(`✅ Social media validation complete: ${totalProfiles} profiles found`);
+    }
 
-    return {
+    const result = {
       profiles,
       totalProfiles,
       hasConsistentPresence,
       credibilityScore,
-      vettingAssessment
+      vettingAssessment,
+      botDetectionMessages: botDetectionMessages.length > 0 ? botDetectionMessages : undefined
     };
+
+    return result;
   }
 
   /**
@@ -242,23 +265,19 @@ export class SocialMediaValidator {
       // Try each search term
       for (const term of searchTerms) {
         try {
-          console.log(`🔍 Searching Google for: linkedin ${term}`);
-          
           // Navigate to Google search with US parameters
           const searchUrl = `https://www.google.com/search?q=linkedin+${encodeURIComponent(term)}&gl=us&hl=en`;
           await page.goto(searchUrl, { waitUntil: 'networkidle', timeout });
           
           // Check for bot detection after navigation
-          const hasBotDetection = await this.handleBotDetection(page);
-          if (hasBotDetection) {
-            console.log(`   Bot detection encountered, skipping term: ${term}`);
-            continue;
+          const botDetection = await this.handleBotDetection(page);
+          if (botDetection.detected) {
+            throw new Error(`Google bot detection: ${botDetection.message}. Try again later.`);
           }
           
           // Simulate human behavior after page load
           await this.simulateHumanMovement(page);
           await this.addRandomDelay(1000, 3000);
-          console.log(`   Navigated to: ${searchUrl}`);
           
           // Handle consent if it appears
           const consentButton = page.locator('button:has-text("Accept all")').first();
@@ -329,6 +348,10 @@ export class SocialMediaValidator {
       }
     } catch (error) {
       console.log(`⚠️ Playwright browser error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // If this is a bot detection error, propagate it up
+      if (error instanceof Error && error.message && error.message.includes('bot detection')) {
+        throw error;
+      }
     } finally {
       if (browser) {
         await browser.close();
@@ -667,10 +690,15 @@ export class SocialMediaValidator {
       
       for (const term of searchTerms) {
         try {
-          console.log(`🔍 Searching Google for: facebook ${term}`);
-          
           const searchUrl = `https://www.google.com/search?q=facebook+${encodeURIComponent(term)}&gl=us&hl=en`;
           await page.goto(searchUrl, { waitUntil: 'networkidle', timeout });
+          
+          // Check for bot detection after navigation
+          const botDetection = await this.handleBotDetection(page);
+          if (botDetection.detected) {
+            throw new Error(`Google bot detection: ${botDetection.message}. Try again later.`);
+          }
+          
           await this.simulateHumanMovement(page);
           await this.addRandomDelay(1000, 3000);
           
@@ -712,12 +740,19 @@ export class SocialMediaValidator {
           
           await this.addRandomDelay(3000, 7000);
         } catch (error) {
+          if (error instanceof Error && error.message && error.message.includes('bot detection')) {
+            throw error;
+          }
           console.log(`⚠️ Facebook search failed for term "${term}": ${error instanceof Error ? error.message : 'Unknown error'}`);
           continue;
         }
       }
     } catch (error) {
       console.log(`⚠️ Facebook browser error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // If this is a bot detection error, propagate it up
+      if (error instanceof Error && error.message && error.message.includes('bot detection')) {
+        throw error;
+      }
     } finally {
       if (browser) {
         await browser.close();
@@ -812,10 +847,15 @@ export class SocialMediaValidator {
       
       for (const term of searchTerms) {
         try {
-          console.log(`🔍 Searching Google for: twitter ${term} OR x.com ${term}`);
-          
           const searchUrl = `https://www.google.com/search?q=twitter+${encodeURIComponent(term)}+OR+x.com+${encodeURIComponent(term)}&gl=us&hl=en`;
           await page.goto(searchUrl, { waitUntil: 'networkidle', timeout });
+          
+          // Check for bot detection after navigation
+          const botDetection = await this.handleBotDetection(page);
+          if (botDetection.detected) {
+            throw new Error(`Google bot detection: ${botDetection.message}. Try again later.`);
+          }
+          
           await this.simulateHumanMovement(page);
           await this.addRandomDelay(1000, 3000);
           
@@ -857,12 +897,19 @@ export class SocialMediaValidator {
           
           await this.addRandomDelay(3000, 7000);
         } catch (error) {
+          if (error instanceof Error && error.message && error.message.includes('bot detection')) {
+            throw error;
+          }
           console.log(`⚠️ Twitter/X search failed for term "${term}": ${error instanceof Error ? error.message : 'Unknown error'}`);
           continue;
         }
       }
     } catch (error) {
       console.log(`⚠️ Twitter/X browser error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // If this is a bot detection error, propagate it up
+      if (error instanceof Error && error.message && error.message.includes('bot detection')) {
+        throw error;
+      }
     } finally {
       if (browser) {
         await browser.close();
@@ -957,10 +1004,15 @@ export class SocialMediaValidator {
       
       for (const term of searchTerms) {
         try {
-          console.log(`🔍 Searching Google for: instagram ${term}`);
-          
           const searchUrl = `https://www.google.com/search?q=instagram+${encodeURIComponent(term)}&gl=us&hl=en`;
           await page.goto(searchUrl, { waitUntil: 'networkidle', timeout });
+          
+          // Check for bot detection after navigation
+          const botDetection = await this.handleBotDetection(page);
+          if (botDetection.detected) {
+            throw new Error(`Google bot detection: ${botDetection.message}. Try again later.`);
+          }
+          
           await this.simulateHumanMovement(page);
           await this.addRandomDelay(1000, 3000);
           
@@ -1002,12 +1054,19 @@ export class SocialMediaValidator {
           
           await this.addRandomDelay(3000, 7000);
         } catch (error) {
+          if (error instanceof Error && error.message && error.message.includes('bot detection')) {
+            throw error;
+          }
           console.log(`⚠️ Instagram search failed for term "${term}": ${error instanceof Error ? error.message : 'Unknown error'}`);
           continue;
         }
       }
     } catch (error) {
       console.log(`⚠️ Instagram browser error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // If this is a bot detection error, propagate it up
+      if (error instanceof Error && error.message && error.message.includes('bot detection')) {
+        throw error;
+      }
     } finally {
       if (browser) {
         await browser.close();
@@ -1037,36 +1096,54 @@ export class SocialMediaValidator {
     return Math.min(score, 100);
   }
 
-  static generateVettingAssessment(profiles: any[], totalProfiles: number): string[] {
+  static generateVettingAssessment(profiles: any[], totalProfiles: number, botDetectionMessages?: string[]): string[] {
     const assessments: string[] = [];
     const existingPlatforms = profiles.filter(p => p.exists).map(p => p.platform);
     const missingPlatforms = ['linkedin', 'facebook', 'x', 'instagram'].filter(p => !existingPlatforms.includes(p));
     
-    if (totalProfiles === 0) {
-      assessments.push('⚠️ No social media presence detected - may indicate limited digital footprint or new business');
-    } else {
-      if (totalProfiles === 1) {
-        assessments.push('⚠️ Limited social media presence - only found on one platform');
-      } else if (totalProfiles >= 2) {
-        assessments.push('✅ Multiple platform presence indicates established digital footprint');
+    // If we have bot detection messages, prioritize those over "no presence" assessment
+    if (botDetectionMessages && botDetectionMessages.length > 0) {
+      assessments.push('⚠️ Social media analysis limited due to bot detection - some platforms may be temporarily unavailable');
+      
+      // Still provide some assessment based on what we could check
+      if (totalProfiles > 0) {
+        if (totalProfiles === 1) {
+          assessments.push('⚠️ Limited social media presence detected on accessible platforms');
+        } else if (totalProfiles >= 2) {
+          assessments.push('✅ Multiple platform presence detected on accessible platforms');
+        }
       }
       
-      if (missingPlatforms.includes('linkedin')) {
-        assessments.push('⚠️ No LinkedIn presence found - uncommon for legitimate businesses');
+      // Risk assessment for bot detection scenario
+      assessments.push('🟡 MEDIUM RISK: Social media verification incomplete due to bot detection');
+    } else {
+      // Normal assessment when no bot detection
+      if (totalProfiles === 0) {
+        assessments.push('⚠️ No social media presence detected - may indicate limited digital footprint or new business');
+      } else {
+        if (totalProfiles === 1) {
+          assessments.push('⚠️ Limited social media presence - only found on one platform');
+        } else if (totalProfiles >= 2) {
+          assessments.push('✅ Multiple platform presence indicates established digital footprint');
+        }
+        
+        if (missingPlatforms.includes('linkedin')) {
+          assessments.push('⚠️ No LinkedIn presence found - uncommon for legitimate businesses');
+        }
+      }
+      
+      // Risk assessment
+      if (totalProfiles === 0) {
+        assessments.push('🔴 HIGH RISK: No social media verification possible');
+      } else if (totalProfiles === 1) {
+        assessments.push('🟡 MEDIUM RISK: Limited social presence');
+      } else if (totalProfiles >= 2) {
+        assessments.push('🟢 LOW RISK: Established social media presence');
       }
     }
     
-    // Risk assessment
-    if (totalProfiles === 0) {
-      assessments.push('🔴 HIGH RISK: No social media verification possible');
-    } else if (totalProfiles === 1) {
-      assessments.push('🟡 MEDIUM RISK: Limited social presence');
-    } else if (totalProfiles >= 2) {
-      assessments.push('🟢 LOW RISK: Established social media presence');
-    }
-    
-         return assessments;
-   }
+    return assessments;
+  }
 
   /**
    * Get a random user agent from the pool
@@ -1277,43 +1354,33 @@ export class SocialMediaValidator {
   }
 
   /**
-   * Check if page indicates bot detection and take appropriate action
+   * Check if page indicates bot detection and return detection message
    */
-  static async handleBotDetection(page: any): Promise<boolean> {
+  static async handleBotDetection(page: any): Promise<{ detected: boolean; message?: string }> {
     try {
       // Check for common bot detection indicators
       const botDetectionSelectors = [
-        'text=Access denied',
-        'text=Captcha',
-        'text=Please verify',
-        'text=Too many requests',
-        'text=Unusual traffic',
-        '[id*="captcha"]',
-        '[class*="captcha"]',
-        '[id*="challenge"]',
-        '[class*="challenge"]'
+        { selector: 'text=Access denied', message: 'Access denied by Google' },
+        { selector: 'text=Captcha', message: 'CAPTCHA challenge detected' },
+        { selector: 'text=Please verify', message: 'Verification required' },
+        { selector: 'text=Too many requests', message: 'Too many requests to Google' },
+        { selector: 'text=Unusual traffic', message: 'Unusual traffic detected' },
+        { selector: '[id*="captcha"]', message: 'CAPTCHA challenge detected' },
+        { selector: '[class*="captcha"]', message: 'CAPTCHA challenge detected' },
+        { selector: '[id*="challenge"]', message: 'Security challenge detected' },
+        { selector: '[class*="challenge"]', message: 'Security challenge detected' }
       ];
       
-      for (const selector of botDetectionSelectors) {
+      for (const { selector, message } of botDetectionSelectors) {
         if (await page.locator(selector).isVisible({ timeout: 2000 }).catch(() => false)) {
-          console.log(`   Bot detection detected: ${selector}`);
-          
-          // Take a screenshot for debugging
-          const timestamp = Date.now();
-          await page.screenshot({ 
-            path: `bot-detection-${timestamp}.png`,
-            fullPage: true 
-          });
-          console.log(`   Screenshot saved: bot-detection-${timestamp}.png`);
-          
-          return true;
+          return { detected: true, message };
         }
       }
       
-      return false;
+      return { detected: false };
     } catch (error) {
       console.log(`   Error checking for bot detection: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      return false;
+      return { detected: false };
     }
   }
 
@@ -1332,8 +1399,9 @@ export class SocialMediaValidator {
       }
       
       // Check for bot detection
-      const hasBotDetection = await this.handleBotDetection(page);
-      if (hasBotDetection) {
+      const botDetection = await this.handleBotDetection(page);
+      if (botDetection.detected) {
+        console.log(`   Bot detection message: ${botDetection.message}`);
         // If bot detection is present, wait longer and try a different approach
         await this.addRandomDelay(15000, 30000);
         

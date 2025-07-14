@@ -385,6 +385,8 @@ async function transformWhoisData(
       riskFactors: riskFactors
     };
     
+    console.log(`🔍 WHOIS service social media data:`, JSON.stringify((websiteValidation as any).socialMedia, null, 2));
+    
     return result as any;
   }
 

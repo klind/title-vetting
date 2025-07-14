@@ -36,6 +36,7 @@ export interface WebsiteValidationResult {
     hasConsistentPresence: boolean;
     credibilityScore: number;
     recommendations: string[];
+    botDetectionMessages?: string[];
   };
   error?: string;
 } 

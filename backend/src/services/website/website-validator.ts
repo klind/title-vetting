@@ -79,6 +79,7 @@ export async function validateWebsite(
                 organizationName, 
                 { timeout, userAgent }
               );
+              console.log(`📥 Website validator received social media:`, JSON.stringify(socialMedia, null, 2));
             } catch (error) {
               console.warn('Social media validation failed:', error);
             }
