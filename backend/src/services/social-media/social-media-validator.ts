@@ -93,17 +93,15 @@ export class SocialMediaValidator {
     });
 
     const totalProfiles = profiles.filter(p => p.exists).length;
-    const verifiedProfiles = profiles.filter(p => p.verified).length;
     const hasConsistentPresence = totalProfiles >= 2; // At least 2 platforms
     const credibilityScore = this.calculateCredibilityScore(profiles);
-    const vettingAssessment = this.generateVettingAssessment(profiles, totalProfiles, verifiedProfiles);
+    const vettingAssessment = this.generateVettingAssessment(profiles, totalProfiles);
 
-    console.log(`✅ Social media validation complete: ${totalProfiles} profiles found, ${verifiedProfiles} verified`);
+    console.log(`✅ Social media validation complete: ${totalProfiles} profiles found`);
 
     return {
       profiles,
       totalProfiles,
-      verifiedProfiles,
       hasConsistentPresence,
       credibilityScore,
       vettingAssessment
@@ -1039,7 +1037,7 @@ export class SocialMediaValidator {
     return Math.min(score, 100);
   }
 
-  static generateVettingAssessment(profiles: any[], totalProfiles: number, verifiedProfiles: number): string[] {
+  static generateVettingAssessment(profiles: any[], totalProfiles: number): string[] {
     const assessments: string[] = [];
     const existingPlatforms = profiles.filter(p => p.exists).map(p => p.platform);
     const missingPlatforms = ['linkedin', 'facebook', 'x', 'instagram'].filter(p => !existingPlatforms.includes(p));
@@ -1047,10 +1045,6 @@ export class SocialMediaValidator {
     if (totalProfiles === 0) {
       assessments.push('⚠️ No social media presence detected - may indicate limited digital footprint or new business');
     } else {
-      if (verifiedProfiles === 0) {
-        assessments.push('⚠️ No verified social media profiles found - unable to confirm authenticity');
-      }
-      
       if (totalProfiles === 1) {
         assessments.push('⚠️ Limited social media presence - only found on one platform');
       } else if (totalProfiles >= 2) {
@@ -1065,8 +1059,8 @@ export class SocialMediaValidator {
     // Risk assessment
     if (totalProfiles === 0) {
       assessments.push('🔴 HIGH RISK: No social media verification possible');
-    } else if (totalProfiles === 1 && verifiedProfiles === 0) {
-      assessments.push('🟡 MEDIUM RISK: Limited unverified social presence');
+    } else if (totalProfiles === 1) {
+      assessments.push('🟡 MEDIUM RISK: Limited social presence');
     } else if (totalProfiles >= 2) {
       assessments.push('🟢 LOW RISK: Established social media presence');
     }

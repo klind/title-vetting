@@ -33,7 +33,6 @@ export interface WebsiteValidationResult {
   socialMedia?: {
     profiles: any[];
     totalProfiles: number;
-    verifiedProfiles: number;
     hasConsistentPresence: boolean;
     credibilityScore: number;
     recommendations: string[];

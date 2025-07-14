@@ -133,7 +133,6 @@ export interface SocialMediaValidation {
     followers?: number;
   }>;
   totalProfiles?: number;
-  verifiedProfiles?: number;
   hasConsistentPresence?: boolean;
   credibilityScore?: number;
   vettingAssessment?: string[];

@@ -65,8 +65,7 @@ import { StatusCodes } from '../../config/constants.js';
  *                       properties:
  *                         totalProfiles:
  *                           type: number
- *                         verifiedProfiles:
- *                           type: number
+
  *                         platforms:
  *                           type: array
  *                           items:
@@ -150,7 +149,6 @@ export async function handleSocialMediaRequest(
         profiles: [],
         summary: {
           totalProfiles: 0,
-          verifiedProfiles: 0,
           platforms: []
         },
         error: `Social media validation failed: ${error.message}`
