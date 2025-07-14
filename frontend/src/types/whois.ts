@@ -136,6 +136,7 @@ export interface SocialMediaValidation {
   hasConsistentPresence?: boolean;
   credibilityScore?: number;
   vettingAssessment?: string[];
+  botDetectionMessages?: string[];
   error?: string;
 }
 

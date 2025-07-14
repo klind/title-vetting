@@ -199,6 +199,21 @@ const SocialMediaSection: React.FC<SocialMediaSectionProps> = ({ data, className
         </div>
       )}
 
+      {/* Bot Detection Messages */}
+      {data.botDetectionMessages && data.botDetectionMessages.length > 0 && (
+        <div className="bg-yellow-900/20 border border-yellow-500 rounded-lg p-4">
+          <h4 className="text-md font-semibold text-yellow-400 mb-2">⚠️ Bot Detection Notifications</h4>
+          <div className="space-y-2">
+            {data.botDetectionMessages.map((message, index) => (
+              <div key={index} className="text-sm text-yellow-300 flex items-start space-x-2">
+                <span className="text-yellow-400 mt-1">•</span>
+                <span>{message}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Error Information */}
       {data.error && (
         <div className="bg-red-900/20 border border-red-500 rounded-lg p-4">

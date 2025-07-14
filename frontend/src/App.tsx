@@ -142,7 +142,7 @@ const App: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent mb-4">
-            Title Company Vetter
+            Title Company Vetter Beta 1.0
           </h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
             Comprehensive domain analysis for title companies. Get WHOIS data, website validation, and social media presence in one report.
