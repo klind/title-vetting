@@ -32,7 +32,8 @@ const App: React.FC = () => {
       }
 
       console.log('Making API call to:', fullUrl);
-      const response = await fetch('http://localhost:3001/combined', {
+      const apiBaseUrl = import.meta.env.VITE_API_ENDPOINT || 'http://localhost:3001';
+      const response = await fetch(`${apiBaseUrl}/combined`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
