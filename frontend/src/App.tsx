@@ -259,7 +259,6 @@ const App: React.FC = () => {
                 <div className="bg-gray-800 rounded-lg p-6">
                   <div className="text-white">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xl font-semibold">Risk Assessment</h3>
                       <div className="text-xs text-gray-400">
                         {new Date(whoisReport.riskAssessment.timestamp).toLocaleString()}
                       </div>

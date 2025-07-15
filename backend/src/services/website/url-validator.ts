@@ -26,8 +26,13 @@ const SUSPICIOUS_PATTERNS = [
  * Known malicious TLDs or patterns
  */
 const SUSPICIOUS_TLDS = [
-  '.tk', '.ml', '.ga', '.cf', // Free TLDs often used maliciously
-  '.click', '.download', '.loan', // Suspicious commercial TLDs
+  // Free and often-abused country-code TLDs
+  '.tk', '.ml', '.ga', '.cf', '.gq',
+
+  // Cheap or commonly abused generic TLDs
+  '.click', '.download', '.loan', '.xyz', '.top', '.zip', '.review',
+  '.country', '.men', '.work', '.party', '.stream', '.cam', '.host',
+  '.support', '.biz', '.cc'
 ];
 
 /**

@@ -56,7 +56,7 @@
       "enabled": true,
       "description": "Registration jurisdiction risk assessment",
       "rules": [
-        { "condition": "nonWesternCountry", "score": 25, "description": "Domain registered in non-Western country" },
+        { "condition": "nonUSCountry", "score": 25, "description": "Domain registered outside the United States" },
         { "condition": "highRiskCountry", "score": 40, "description": "Domain registered in high-risk country" }
       ]
     },
@@ -141,9 +141,6 @@
     }
   },
   "countries": {
-    "western": [
-      "US", "CA", "GB", "AU", "DE", "FR", "IT", "ES", "NL", "SE", "NO", "DK", "FI", "CH", "AT", "BE", "IE", "NZ", "JP", "KR", "SG", "HK", "TW"
-    ],
     "highRisk": [
       "CN", "RU", "KP", "IR", "SY", "CU", "MM", "AF", "IQ", "LY", "SO", "SS", "YE", "CF", "TD", "ER", "GN", "LR", "ML", "NE", "SL", "BF", "CI", "GH", "MR", "SN", "TG", "BJ", "CM", "GA", "GQ", "ST", "AO", "CD", "CG", "DJ", "ET", "KE", "MG", "MW", "MZ", "RW", "TZ", "UG", "ZM", "ZW", "BI", "KM", "SC", "MU", "MV", "LK", "BD", "BT", "NP", "PK", "LA", "KH", "MN", "VN", "ID", "MY", "PH", "TH", "BN", "TL", "PG", "SB", "VU", "FJ", "TO", "WS", "KI", "NR", "PW", "FM", "MH", "TV"
     ]

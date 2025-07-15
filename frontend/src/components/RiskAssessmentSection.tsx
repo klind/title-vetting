@@ -7,7 +7,7 @@ interface RiskAssessmentSectionProps {
 }
 
 export function RiskAssessmentSection({ riskAssessment, className = '' }: RiskAssessmentSectionProps) {
-  
+
   /**
    * Gets the risk level color classes
    */
@@ -106,7 +106,7 @@ export function RiskAssessmentSection({ riskAssessment, className = '' }: RiskAs
    */
   const ProgressBar = ({ score, maxScore, level }: { score: number; maxScore: number; level: RiskLevel }) => {
     const percentage = (score / maxScore) * 100;
-    
+
     return (
       <div className="w-full bg-gray-200 rounded-full h-2">
         <div
@@ -140,7 +140,7 @@ export function RiskAssessmentSection({ riskAssessment, className = '' }: RiskAs
             {assessment.riskLevel.toUpperCase()}
           </div>
         </div>
-        
+
         <div className="mb-2">
           <div className="flex justify-between text-sm text-gray-600 mb-1">
             <span>Score</span>
@@ -190,13 +190,13 @@ export function RiskAssessmentSection({ riskAssessment, className = '' }: RiskAs
             </div>
           </div>
         </div>
-        
-        <ProgressBar 
-          score={riskAssessment.overallScore} 
-          maxScore={riskAssessment.maxScore} 
-          level={riskAssessment.riskLevel} 
+
+        <ProgressBar
+          score={riskAssessment.overallScore}
+          maxScore={riskAssessment.maxScore}
+          level={riskAssessment.riskLevel}
         />
-        
+
         <div className="mt-4 text-sm opacity-90">
           {riskAssessment.riskSummary}
         </div>
@@ -235,6 +235,10 @@ export function RiskAssessmentSection({ riskAssessment, className = '' }: RiskAs
           <h4 className="font-medium text-gray-900 mb-3">Recommendations</h4>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <ul className="space-y-2">
+              <li className="flex items-start gap-2 text-sm text-blue-800">
+                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
+                Always call the title or escrow company using a trusted phone number to verify wire instructions before sending funds.
+              </li>
               {riskAssessment.recommendations.map((recommendation, index) => (
                 <li key={index} className="flex items-start gap-2 text-sm text-blue-800">
                   <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0" />

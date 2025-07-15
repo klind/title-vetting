@@ -21,7 +21,7 @@ export type RiskCondition =
   | 'missingRegistrantPhone'
   | 'missingRegistrantName'
   | 'missingAdminContact'
-  | 'nonWesternCountry'
+  | 'nonUSCountry'
   | 'highRiskCountry'
   | 'registrarScoreBelow'
   | 'unknownRegistrar'
@@ -103,7 +103,6 @@ export interface RiskConfiguration {
   websiteRiskFactors: Record<string, RiskFactorCategory>;
   socialMediaRiskFactors: Record<string, RiskFactorCategory>;
   countries: {
-    western: string[];
     highRisk: string[];
   };
 }
@@ -283,7 +282,6 @@ export const RiskConfigurationSchema = z.object({
     }))
   })),
   countries: z.object({
-    western: z.array(z.string()),
     highRisk: z.array(z.string())
   })
 });

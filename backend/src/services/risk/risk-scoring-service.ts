@@ -284,8 +284,8 @@ export class RiskScoringService {
       case 'missingAdminContact':
         return !whoisData?.adminEmail && !whoisData?.adminPhone && !whoisData?.adminName;
       
-      case 'nonWesternCountry':
-        return this.isNonWesternCountry(whoisData?.registrantCountry, config);
+      case 'nonUSCountry':
+        return this.isNonUSCountry(whoisData?.registrantCountry);
       
       case 'highRiskCountry':
         return this.isHighRiskCountry(whoisData?.registrantCountry, config);
@@ -394,11 +394,11 @@ export class RiskScoringService {
   }
 
   /**
-   * Check if country is non-Western
+   * Check if country is non-US
    */
-  private isNonWesternCountry(country?: string, config?: RiskConfiguration): boolean {
-    if (!country || !config) return false;
-    return !config.countries.western.includes(country.toUpperCase());
+  private isNonUSCountry(country?: string): boolean {
+    if (!country) return false;
+    return country.toUpperCase() !== 'US';
   }
 
   /**

@@ -435,7 +435,7 @@ const WhoisSection: React.FC<WhoisSectionProps> = ({ data, className = '' }) => 
                 <div className="text-xs text-gray-400">Fields Retrieved</div>
               </div>
               <div className="text-center p-3 bg-gray-700 rounded-lg">
-                <div className="text-2xl font-bold text-green-400">{data.metadata.lookupTime}ms</div>
+                <div className="text-2xl font-bold text-green-400">{(data.metadata.lookupTime / 1000).toFixed(1)}s</div>
                 <div className="text-xs text-gray-400">Query Time</div>
               </div>
               <div className="text-center p-3 bg-gray-700 rounded-lg">

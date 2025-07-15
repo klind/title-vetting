@@ -78,10 +78,48 @@ export function useDomainAnalysis(): UseApiHookReturn<WhoisReport> & {
 
     // Check for suspicious patterns
     const suspiciousPatterns = [
+      // Local/private network patterns
       { pattern: /localhost/i, message: 'Localhost URLs are not allowed' },
       { pattern: /127\.0\.0\.1/, message: 'Local IP addresses are not allowed' },
       { pattern: /192\.168\./, message: 'Private IP addresses are not allowed' },
       { pattern: /10\./, message: 'Private IP addresses are not allowed' },
+      
+      // Suspicious domain patterns
+      { pattern: /login[\.-]/i, message: 'Domain contains suspicious login-related patterns' },
+      { pattern: /secure[\.-]/i, message: 'Domain contains suspicious security-related patterns' },
+      { pattern: /verify[\.-]/i, message: 'Domain contains suspicious verification patterns' },
+      { pattern: /account[\.-]/i, message: 'Domain contains suspicious account-related patterns' },
+      { pattern: /update[\.-]/i, message: 'Domain contains suspicious update patterns' },
+      { pattern: /signin/i, message: 'Domain contains suspicious signin patterns' },
+      { pattern: /auth[\.-]/i, message: 'Domain contains suspicious authentication patterns' },
+      { pattern: /webscr/i, message: 'Domain contains suspicious payment script patterns' },
+      
+      // Brand impersonation & homoglyph attacks
+      { pattern: /g00gle/i, message: 'Domain appears to impersonate Google' },
+      { pattern: /faceb00k/i, message: 'Domain appears to impersonate Facebook' },
+      { pattern: /paypa1/i, message: 'Domain appears to impersonate PayPal' },
+      { pattern: /tw1tter/i, message: 'Domain appears to impersonate Twitter' },
+      { pattern: /microsof+t/i, message: 'Domain appears to impersonate Microsoft' },
+      { pattern: /amaz0n/i, message: 'Domain appears to impersonate Amazon' },
+      { pattern: /lnked[inl]/i, message: 'Domain appears to impersonate LinkedIn' },
+      { pattern: /icloud[-\.]/i, message: 'Domain appears to impersonate iCloud' },
+      { pattern: /secure.*apple/i, message: 'Domain appears to impersonate Apple security' },
+      
+      // High-risk or abuse-heavy TLDs
+      { pattern: /\.zip$/i, message: 'Domain uses high-risk .zip TLD' },
+      { pattern: /\.tk$/i, message: 'Domain uses high-risk .tk TLD' },
+      { pattern: /\.ml$/i, message: 'Domain uses high-risk .ml TLD' },
+      { pattern: /\.ga$/i, message: 'Domain uses high-risk .ga TLD' },
+      { pattern: /\.cf$/i, message: 'Domain uses high-risk .cf TLD' },
+      { pattern: /\.gq$/i, message: 'Domain uses high-risk .gq TLD' },
+      { pattern: /\.top$/i, message: 'Domain uses high-risk .top TLD' },
+      { pattern: /\.xyz$/i, message: 'Domain uses high-risk .xyz TLD' },
+      
+      // Encoded or suspiciously long subdomains
+      { pattern: /^https?:\/\/[a-z0-9]{20,}\.[a-z0-9-]+\..+/i, message: 'Domain has suspiciously long subdomain' },
+      
+      // Excessive subdomain chaining
+      { pattern: /^https?:\/\/([a-z0-9-]+\.){3,}.*$/i, message: 'Domain has excessive subdomain chaining' },
     ];
 
     suspiciousPatterns.forEach(({ pattern, message }) => {
