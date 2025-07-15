@@ -312,4 +312,11 @@ export function searchRegistrars(pattern: string): RegistrarReputation[] {
   });
 
   return matches;
+}
+
+/**
+ * Get registrar reputation by name (simplified version for risk assessment)
+ */
+export function getRegistrarReputation(registrarName: string): RegistrarReputation | null {
+  return REGISTRAR_REPUTATION_DATA[registrarName] || null;
 } 

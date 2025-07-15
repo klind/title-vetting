@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { WebsiteValidationResult } from './validation.js';
+import { RiskAssessmentResult } from './risk.js';
 
 /**
  * WHOIS API response schema for validation
@@ -175,7 +176,9 @@ export interface WhoisReport {
   
   // Additional validation results
   website?: WebsiteValidationResult;
-  riskFactors: string[];
+  
+  // Risk assessment results
+  riskAssessment?: RiskAssessmentResult;
   
   // Raw WHOIS data for reference
   rawWhoisData?: any;
@@ -188,52 +191,4 @@ export interface WhoisReport {
   };
 }
 
-/**
- * Risk assessment utilities
- */
-export function assessRiskFactors(whoisData: WhoisResult): string[] {
-  const risks: string[] = [];
-
-  // Check for recent registration
-  if (whoisData.creationDate) {
-    const created = new Date(whoisData.creationDate);
-    const now = new Date();
-    const daysSinceCreation = (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
-    
-    if (daysSinceCreation < 30) {
-      risks.push('Domain registered very recently (less than 30 days)');
-    } else if (daysSinceCreation < 90) {
-      risks.push('Domain registered recently (less than 90 days)');
-    }
-  }
-
-  // Check for expiration
-  if (whoisData.expirationDate) {
-    const expiration = new Date(whoisData.expirationDate);
-    const now = new Date();
-    const daysUntilExpiration = (expiration.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-    
-    if (daysUntilExpiration < 30) {
-      risks.push('Domain expires soon (less than 30 days)');
-    }
-  }
-
-  // Check for privacy protection
-  if (whoisData.registrantName?.toLowerCase().includes('privacy') ||
-      whoisData.registrantOrganization?.toLowerCase().includes('privacy')) {
-    risks.push('Domain uses privacy protection service');
-  }
-
-  // Check for missing contact information
-  if (!whoisData.registrantEmail && !whoisData.adminEmail) {
-    risks.push('No public contact information available');
-  }
-
-  // Check for suspicious patterns
-  if (whoisData.registrantCountry && 
-      !['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'IT', 'ES', 'NL', 'SE'].includes(whoisData.registrantCountry)) {
-    risks.push('Domain registered in high-risk jurisdiction');
-  }
-
-  return risks;
-} 
+ 

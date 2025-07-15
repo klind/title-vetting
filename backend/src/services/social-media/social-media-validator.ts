@@ -125,7 +125,13 @@ export class SocialMediaValidator {
       hasConsistentPresence,
       credibilityScore,
       vettingAssessment,
-      botDetectionMessages: botDetectionMessages.length > 0 ? botDetectionMessages : undefined
+      botDetectionMessages: botDetectionMessages.length > 0 ? botDetectionMessages : undefined,
+      // Additional risk-related fields
+      platforms: profiles.filter(p => p.exists).map(p => p.platform),
+      verifiedAccounts: profiles.filter(p => p.exists && p.verified),
+      suspiciousAccounts: profiles.filter(p => p.exists && p.suspicious),
+      botDetected: botDetectionMessages.length > 0,
+      presenceScore: totalProfiles * 25 // 25 points per platform for presence scoring
     };
 
     return result;

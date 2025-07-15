@@ -1,6 +1,5 @@
 import { 
-  WhoisReport, 
-  assessRiskFactors 
+  WhoisReport
 } from '../../types/whois.js';
 import { 
   ErrorType, 
@@ -10,6 +9,9 @@ import {
 import { validateUrl, extractDomain } from '../website/url-validator.js';
 import { validateWebsiteComprehensive } from '../website/website-validator.js';
 import { customWhoisLookup } from './custom-whois.js';
+import { riskScoringService } from '../risk/risk-scoring-service.js';
+import { RiskEvaluationContext } from '../../types/risk.js';
+import { getRegistrarReputation } from '../external/registrar-reputation-service.js';
 
 /**
  * Rate limiting configuration
@@ -347,11 +349,63 @@ async function transformWhoisData(
     // Deduplicate fields with registry priority
     const deduplicatedData = deduplicateFields(cleanedRawData);
     
-    // Assess risk factors based on available data
-    const riskFactors = [];
-    if (!deduplicatedData['Registrant Name'] && !deduplicatedData['registrantName']) {
-      riskFactors.push('No public contact information available');
-    }
+    
+    // Get registrar reputation for risk assessment
+    const registrarName = deduplicatedData['Registrar'] || deduplicatedData['registrar'];
+    const registrarReputation = registrarName ? getRegistrarReputation(registrarName) : null;
+    
+    // Create risk evaluation context
+    const riskContext: RiskEvaluationContext = {
+      whoisData: {
+        creationDate: deduplicatedData['Creation Date'] || deduplicatedData['creationDate'],
+        expirationDate: deduplicatedData['Expiration Date'] || deduplicatedData['expirationDate'],
+        registrantEmail: deduplicatedData['Registrant Email'] || deduplicatedData['registrantEmail'],
+        registrantPhone: deduplicatedData['Registrant Phone'] || deduplicatedData['registrantPhone'],
+        registrantName: deduplicatedData['Registrant Name'] || deduplicatedData['registrantName'],
+        adminEmail: deduplicatedData['Admin Email'] || deduplicatedData['adminEmail'],
+        adminPhone: deduplicatedData['Admin Phone'] || deduplicatedData['adminPhone'],
+        adminName: deduplicatedData['Admin Name'] || deduplicatedData['adminName'],
+        registrantCountry: deduplicatedData['Registrant Country'] || deduplicatedData['registrantCountry'],
+        registrar: registrarName,
+        hasPrivacyProtection: Boolean(deduplicatedData['Registrant Organization']?.includes('Privacy') || 
+                                     deduplicatedData['registrantOrganization']?.includes('Privacy'))
+      },
+      websiteData: {
+        hasSSL: (websiteValidation as any).ssl?.hasSSL,
+        sslValid: (websiteValidation as any).ssl?.isValid,
+        sslSelfSigned: (websiteValidation as any).ssl?.isSelfSigned,
+        sslExpired: (websiteValidation as any).ssl?.isExpired,
+        isAccessible: websiteValidation.isAccessible,
+        hasDNS: websiteValidation.hasDns,
+        hasWebsite: websiteValidation.hasWebsite,
+        suspiciousPatterns: (websiteValidation as any).security?.suspiciousPatterns || [],
+        maliciousTLD: (websiteValidation as any).security?.maliciousTLD,
+        typosquatting: (websiteValidation as any).security?.typosquatting,
+        homographAttack: (websiteValidation as any).security?.homographAttack,
+        contactInfo: {
+          hasContactInfo: Boolean((websiteValidation as any).contacts?.emails?.length || 
+                                 (websiteValidation as any).contacts?.phones?.length),
+          validEmails: Boolean((websiteValidation as any).contacts?.emails?.length),
+          hasPhoneNumber: Boolean((websiteValidation as any).contacts?.phones?.length),
+          hasAddress: Boolean((websiteValidation as any).contacts?.addresses?.length)
+        }
+      },
+      socialMediaData: {
+        platforms: (websiteValidation as any).socialMedia?.platforms || [],
+        credibilityScore: (websiteValidation as any).socialMedia?.credibilityScore || 0,
+        hasVerifiedAccounts: Boolean((websiteValidation as any).socialMedia?.verifiedAccounts?.length),
+        suspiciousAccounts: Boolean((websiteValidation as any).socialMedia?.suspiciousAccounts?.length),
+        botDetected: Boolean((websiteValidation as any).socialMedia?.botDetected),
+        presenceScore: (websiteValidation as any).socialMedia?.presenceScore || 0
+      },
+      registrarData: {
+        reputationScore: registrarReputation?.score || 0,
+        isKnown: Boolean(registrarReputation)
+      }
+    };
+    
+    // Perform comprehensive risk assessment
+    const riskAssessment = await riskScoringService.assessRisk(riskContext);
     
     // Create result with separate sections
     const result = {
@@ -382,7 +436,7 @@ async function transformWhoisData(
         },
         socialMedia: (websiteValidation as any).socialMedia || {}
       },
-      riskFactors: riskFactors
+      riskAssessment: riskAssessment
     };
     
     console.log(`🔍 WHOIS service social media data:`, JSON.stringify((websiteValidation as any).socialMedia, null, 2));
