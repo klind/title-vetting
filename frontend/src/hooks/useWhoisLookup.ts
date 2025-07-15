@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { 
   WhoisReport, 
-  WhoisRequest, 
+  DomainAnalysisRequest, 
   WhoisLookupState, 
   RiskAssessment,
   AppError,
@@ -244,7 +244,7 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
       setState(prev => ({ ...prev, status: ProcessingStatus.PROCESSING }));
 
       // Make the API request
-      const request: WhoisRequest = { url: url.trim() };
+      const request: DomainAnalysisRequest = { url: url.trim() };
       const response = await apiClient.post<any>('/combined', request);
 
       if (!response.success || !response.data) {
@@ -310,7 +310,6 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
         website: response.data.data.website,
         riskAssessment: response.data.riskAssessment, // This is the key fix!
         rawWhoisData: response.data.data.whois.rawData,
-        riskFactors: [], // Legacy field, now empty
         metadata: {
           lookupTime: response.data.data.whois.metadata.lookupTime,
           source: response.data.data.whois.metadata.source,

@@ -32,13 +32,25 @@ const options: swaggerJsdoc.Options = {
     ],
     components: {
       schemas: {
+        DomainAnalysisRequest: {
+          type: 'object',
+          required: ['url'],
+          properties: {
+            url: {
+              type: 'string',
+              description: 'Domain name (e.g., "pattentitle.com") or full URL (e.g., "https://pattentitle.com") to perform comprehensive domain analysis on (WHOIS, website validation, social media verification, risk assessment)',
+              example: 'pattentitle.com',
+              pattern: '^(https?:\\/\\/)?([\\w-]+\\.)+[\\w-]+(\\/[\\w-./?%&=]*)?$'
+            }
+          }
+        },
         WhoisRequest: {
           type: 'object',
           required: ['url'],
           properties: {
             url: {
               type: 'string',
-              description: 'Domain name (e.g., "pattentitle.com") or full URL (e.g., "https://pattentitle.com") to perform WHOIS lookup on',
+              description: 'Domain name (e.g., "pattentitle.com") or full URL (e.g., "https://pattentitle.com") to perform domain analysis on (legacy name, use DomainAnalysisRequest instead)',
               example: 'pattentitle.com',
               pattern: '^(https?:\\/\\/)?([\\w-]+\\.)+[\\w-]+(\\/[\\w-./?%&=]*)?$'
             }

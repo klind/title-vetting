@@ -23,7 +23,7 @@ import { StatusCodes } from '../../config/constants.js';
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/WhoisRequest'
+ *             $ref: '#/components/schemas/DomainAnalysisRequest'
  *           examples:
  *             domain_only:
  *               summary: Domain name only

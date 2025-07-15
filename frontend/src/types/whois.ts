@@ -186,9 +186,9 @@ export interface ApiResponse<T = any> {
 }
 
 /**
- * API request for WHOIS lookup
+ * API request for domain analysis (WHOIS, website, social media, risk assessment)
  */
-export interface WhoisRequest {
+export interface DomainAnalysisRequest {
   url: string;
 }
 

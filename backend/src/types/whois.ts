@@ -81,9 +81,9 @@ export const WhoisResultSchema = z.object({
 export type WhoisResult = z.infer<typeof WhoisResultSchema>;
 
 /**
- * Request payload schema for WHOIS lookup
+ * Request payload schema for domain analysis (WHOIS, website, social media, risk assessment)
  */
-export const WhoisRequestSchema = z.object({
+export const DomainAnalysisRequestSchema = z.object({
   url: z.string().min(1, 'URL is required').refine(
     (value) => {
       // Accept both URLs and domain names
@@ -95,7 +95,11 @@ export const WhoisRequestSchema = z.object({
   ),
 });
 
-export type WhoisRequest = z.infer<typeof WhoisRequestSchema>;
+export type DomainAnalysisRequest = z.infer<typeof DomainAnalysisRequestSchema>;
+
+// Legacy aliases for backward compatibility
+export const WhoisRequestSchema = DomainAnalysisRequestSchema;
+export type WhoisRequest = DomainAnalysisRequest;
 
 /**
  * Processed WHOIS report interface
