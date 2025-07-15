@@ -485,7 +485,7 @@ export class RiskScoringService {
    */
   getRecommendations(assessment: RiskAssessmentResult): string[] {
     const recommendations: string[] = [];
-
+    recommendations.push('Always call the title or escrow company using a trusted phone number to verify wire instructions before sending funds.');
     if (assessment.riskLevel === RiskLevel.LOW) {
       recommendations.push('Risk level is acceptable for most transactions');
     } else {

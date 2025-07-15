@@ -9,38 +9,56 @@ interface RiskAssessmentSectionProps {
 export function RiskAssessmentSection({ riskAssessment, className = '' }: RiskAssessmentSectionProps) {
 
   /**
-   * Gets the risk level color classes
+   * Gets the risk level color classes with dark theme styling
    */
   const getRiskLevelClasses = (level: RiskLevel): string => {
     switch (level) {
       case RiskLevelEnum.LOW:
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-gradient-to-r from-emerald-800 to-green-800 text-emerald-200 border-emerald-600';
       case RiskLevelEnum.MEDIUM:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-gradient-to-r from-amber-800 to-yellow-800 text-amber-200 border-amber-600';
       case RiskLevelEnum.HIGH:
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-gradient-to-r from-orange-800 to-red-800 text-red-200 border-red-600';
       case RiskLevelEnum.CRITICAL:
-        return 'bg-red-200 text-red-900 border-red-300';
+        return 'bg-gradient-to-r from-red-800 to-red-900 text-red-200 border-red-600';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-gradient-to-r from-gray-800 to-gray-700 text-gray-200 border-gray-600';
     }
   };
 
   /**
-   * Gets the risk level progress bar color
+   * Gets the risk level progress bar color with gradients
    */
   const getRiskLevelProgressColor = (level: RiskLevel): string => {
     switch (level) {
       case RiskLevelEnum.LOW:
-        return 'bg-green-500';
+        return 'bg-gradient-to-r from-emerald-500 to-green-500';
       case RiskLevelEnum.MEDIUM:
-        return 'bg-yellow-500';
+        return 'bg-gradient-to-r from-amber-500 to-yellow-500';
       case RiskLevelEnum.HIGH:
-        return 'bg-red-500';
+        return 'bg-gradient-to-r from-orange-500 to-red-500';
       case RiskLevelEnum.CRITICAL:
-        return 'bg-red-700';
+        return 'bg-gradient-to-r from-red-600 to-red-700';
       default:
-        return 'bg-gray-500';
+        return 'bg-gradient-to-r from-gray-400 to-gray-500';
+    }
+  };
+
+  /**
+   * Gets the risk level badge color classes for dark theme
+   */
+  const getRiskLevelBadgeClasses = (level: RiskLevel): string => {
+    switch (level) {
+      case RiskLevelEnum.LOW:
+        return 'bg-emerald-800 text-emerald-200 border-emerald-600';
+      case RiskLevelEnum.MEDIUM:
+        return 'bg-amber-800 text-amber-200 border-amber-600';
+      case RiskLevelEnum.HIGH:
+        return 'bg-orange-800 text-orange-200 border-orange-600';
+      case RiskLevelEnum.CRITICAL:
+        return 'bg-red-800 text-red-200 border-red-600';
+      default:
+        return 'bg-gray-700 text-gray-200 border-gray-600';
     }
   };
 
@@ -51,20 +69,20 @@ export function RiskAssessmentSection({ riskAssessment, className = '' }: RiskAs
     switch (level) {
       case RiskLevelEnum.LOW:
         return (
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
           </svg>
         );
       case RiskLevelEnum.MEDIUM:
         return (
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
           </svg>
         );
       case RiskLevelEnum.HIGH:
       case RiskLevelEnum.CRITICAL:
         return (
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
           </svg>
         );
@@ -87,7 +105,7 @@ export function RiskAssessmentSection({ riskAssessment, className = '' }: RiskAs
       case 'website':
         return (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m-9 9a9 9 0 019-9" />
           </svg>
         );
       case 'socialMedia':
@@ -102,15 +120,15 @@ export function RiskAssessmentSection({ riskAssessment, className = '' }: RiskAs
   };
 
   /**
-   * Progress bar component
+   * Progress bar component with dark theme styling
    */
   const ProgressBar = ({ score, maxScore, level }: { score: number; maxScore: number; level: RiskLevel }) => {
     const percentage = (score / maxScore) * 100;
-
+    
     return (
-      <div className="w-full bg-gray-200 rounded-full h-2">
+      <div className="w-full bg-gray-700 rounded-full h-3 shadow-inner overflow-hidden">
         <div
-          className={`h-2 rounded-full transition-all duration-300 ${getRiskLevelProgressColor(level)}`}
+          className={`h-3 rounded-full transition-all duration-500 ease-out shadow-sm ${getRiskLevelProgressColor(level)}`}
           style={{ width: `${percentage}%` }}
         />
       </div>
@@ -118,7 +136,7 @@ export function RiskAssessmentSection({ riskAssessment, className = '' }: RiskAs
   };
 
   /**
-   * Category assessment card
+   * Category assessment card with dark theme
    */
   const CategoryCard = ({ assessment }: { assessment: OptimizedCategoryRiskAssessment }) => {
     const categoryNames = {
@@ -128,21 +146,23 @@ export function RiskAssessmentSection({ riskAssessment, className = '' }: RiskAs
     };
 
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            {getCategoryIcon(assessment.category)}
-            <span className="font-medium text-gray-900">
+            <div className="text-gray-300">
+              {getCategoryIcon(assessment.category)}
+            </div>
+            <span className="font-medium text-white">
               {categoryNames[assessment.category]}
             </span>
           </div>
-          <div className={`px-2 py-1 rounded-full text-xs font-medium ${getRiskLevelClasses(assessment.riskLevel)}`}>
+          <div className={`px-2 py-1 rounded-full text-xs font-medium border ${getRiskLevelBadgeClasses(assessment.riskLevel)}`}>
             {assessment.riskLevel.toUpperCase()}
           </div>
         </div>
 
         <div className="mb-2">
-          <div className="flex justify-between text-sm text-gray-600 mb-1">
+          <div className="flex justify-between text-sm text-gray-300 mb-1">
             <span>Score</span>
             <span>{assessment.score}/{assessment.maxScore}</span>
           </div>
@@ -150,7 +170,7 @@ export function RiskAssessmentSection({ riskAssessment, className = '' }: RiskAs
         </div>
 
         {assessment.contributingFactors.length > 0 && (
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-gray-400">
             {assessment.contributingFactors.length} issue{assessment.contributingFactors.length > 1 ? 's' : ''} identified
           </div>
         )}
@@ -161,50 +181,58 @@ export function RiskAssessmentSection({ riskAssessment, className = '' }: RiskAs
   return (
     <div className={`space-y-6 ${className}`}>
       <div className="flex items-center justify-between">
-        <h3 className="text-xl font-semibold text-gray-900">Risk Assessment</h3>
-        <div className="text-xs text-gray-500">
+        <h3 className="text-xl font-semibold text-white">Risk Assessment</h3>
+        <div className="text-xs text-gray-400">
           {new Date(riskAssessment.timestamp).toLocaleString()}
         </div>
       </div>
 
       {/* Overall Risk Score */}
-      <div className={`p-6 rounded-lg border-2 ${getRiskLevelClasses(riskAssessment.riskLevel)}`}>
+      <div className={`p-6 rounded-lg border-2 shadow-lg ${getRiskLevelClasses(riskAssessment.riskLevel)}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            {getRiskLevelIcon(riskAssessment.riskLevel)}
+            <div className="p-2 rounded-full bg-black/20 backdrop-blur-sm">
+              <div className="w-5 h-5">
+                {getRiskLevelIcon(riskAssessment.riskLevel)}
+              </div>
+            </div>
             <div>
-              <div className="font-bold text-lg uppercase tracking-wide">
+              <div className="font-bold text-xl uppercase tracking-wide mb-1">
                 {riskAssessment.riskLevel} Risk
               </div>
-              <div className="text-sm opacity-90">
+              <div className="text-xs opacity-80 font-medium">
                 Overall Score: {riskAssessment.overallScore}/{riskAssessment.maxScore}
               </div>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold">
+            <div className="text-3xl font-bold mb-1">
               {riskAssessment.overallScore}
             </div>
-            <div className="text-sm opacity-90">
+            <div className="text-base opacity-80 font-medium">
               /{riskAssessment.maxScore}
             </div>
           </div>
         </div>
-
-        <ProgressBar
-          score={riskAssessment.overallScore}
-          maxScore={riskAssessment.maxScore}
-          level={riskAssessment.riskLevel}
-        />
-
-        <div className="mt-4 text-sm opacity-90">
-          {riskAssessment.riskSummary}
+        
+        <div className="mb-4">
+          <ProgressBar 
+            score={riskAssessment.overallScore} 
+            maxScore={riskAssessment.maxScore} 
+            level={riskAssessment.riskLevel} 
+          />
+        </div>
+        
+        <div className="bg-black/20 backdrop-blur-sm rounded-lg p-3">
+          <div className="text-sm font-medium opacity-90">
+            {riskAssessment.riskSummary}
+          </div>
         </div>
       </div>
 
       {/* Category Breakdown */}
       <div>
-        <h4 className="font-medium text-gray-900 mb-3">Category Breakdown</h4>
+        <h4 className="font-medium text-orange-400 mb-3">Category Breakdown</h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <CategoryCard assessment={riskAssessment.whoisAssessment} />
           <CategoryCard assessment={riskAssessment.websiteAssessment} />
@@ -215,11 +243,11 @@ export function RiskAssessmentSection({ riskAssessment, className = '' }: RiskAs
       {/* Key Issues */}
       {riskAssessment.keyIssues.length > 0 && (
         <div>
-          <h4 className="font-medium text-gray-900 mb-3">Key Issues</h4>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h4 className="font-medium text-orange-400 mb-3">Key Issues</h4>
+          <div className="bg-red-900/20 border border-red-600/50 rounded-lg p-4">
             <ul className="space-y-2">
               {riskAssessment.keyIssues.map((issue, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-red-800">
+                <li key={index} className="flex items-start gap-2 text-sm text-red-300">
                   <span className="w-1.5 h-1.5 bg-red-500 rounded-full mt-2 flex-shrink-0" />
                   {issue}
                 </li>
@@ -232,16 +260,12 @@ export function RiskAssessmentSection({ riskAssessment, className = '' }: RiskAs
       {/* Recommendations */}
       {riskAssessment.recommendations.length > 0 && (
         <div>
-          <h4 className="font-medium text-gray-900 mb-3">Recommendations</h4>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="font-medium text-orange-400 mb-3">Recommendations</h4>
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
             <ul className="space-y-2">
-              <li className="flex items-start gap-2 text-sm text-blue-800">
-                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
-                Always call the title or escrow company using a trusted phone number to verify wire instructions before sending funds.
-              </li>
               {riskAssessment.recommendations.map((recommendation, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-blue-800">
-                  <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
+                <li key={index} className="flex items-start gap-2 text-sm text-white">
+                  <span className="w-1.5 h-1.5 bg-gray-500 rounded-full mt-2 flex-shrink-0" />
                   {recommendation}
                 </li>
               ))}
@@ -253,22 +277,22 @@ export function RiskAssessmentSection({ riskAssessment, className = '' }: RiskAs
       {/* Contributing Factors Details */}
       {riskAssessment.contributingFactors.length > 0 && (
         <div>
-          <h4 className="font-medium text-gray-900 mb-3">
+          <h4 className="font-medium text-orange-400 mb-3">
             Contributing Factors ({riskAssessment.contributingFactors.length})
           </h4>
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {riskAssessment.contributingFactors.map((factor, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
+                <div key={index} className="flex items-center justify-between p-2 bg-gray-700 rounded border border-gray-600">
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-900">
+                    <div className="text-sm font-medium text-white">
                       {factor.description}
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-400">
                       {factor.category.toUpperCase()}
                     </div>
                   </div>
-                  <div className="ml-3 text-sm font-medium text-gray-700">
+                  <div className="ml-3 text-sm font-medium text-gray-300">
                     +{factor.score}
                   </div>
                 </div>

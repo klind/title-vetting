@@ -4,6 +4,7 @@ import LoadingSpinner from './components/LoadingSpinner';
 import WhoisSection from './components/WhoisSection';
 import WebsiteSection from './components/WebsiteSection';
 import SocialMediaSection from './components/SocialMediaSection';
+import { RiskAssessmentSection } from './components/RiskAssessmentSection';
 import { useDomainAnalysis } from './hooks/useDomainAnalysis';
 import type { CombinedReport, WhoisReport as WhoisReportType } from './types/whois';
 
@@ -256,77 +257,7 @@ const App: React.FC = () => {
             {/* Risk Assessment Section */}
             {whoisReport?.riskAssessment && (
               <ExpandableSection title="Risk Assessment" defaultOpen>
-                <div className="bg-gray-800 rounded-lg p-6">
-                  <div className="text-white">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="text-xs text-gray-400">
-                        {new Date(whoisReport.riskAssessment.timestamp).toLocaleString()}
-                      </div>
-                    </div>
-                    
-                    {/* Overall Risk Score */}
-                    <div className={`p-4 rounded-lg border-2 mb-6 ${
-                      whoisReport.riskAssessment.riskLevel === 'low' ? 'bg-green-100 text-green-800 border-green-200' :
-                      whoisReport.riskAssessment.riskLevel === 'medium' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                      whoisReport.riskAssessment.riskLevel === 'high' ? 'bg-red-100 text-red-800 border-red-200' :
-                      'bg-red-200 text-red-900 border-red-300'
-                    }`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div>
-                            <div className="font-bold text-lg uppercase tracking-wide">
-                              {whoisReport.riskAssessment.riskLevel} Risk
-                            </div>
-                            <div className="text-sm opacity-90">
-                              Overall Score: {whoisReport.riskAssessment.overallScore}/{whoisReport.riskAssessment.maxScore}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-2xl font-bold">
-                            {whoisReport.riskAssessment.overallScore}
-                          </div>
-                          <div className="text-sm opacity-90">
-                            /{whoisReport.riskAssessment.maxScore}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-2 text-sm opacity-90">
-                        {whoisReport.riskAssessment.riskSummary}
-                      </div>
-                    </div>
-
-                    {/* Key Issues */}
-                    {whoisReport.riskAssessment.keyIssues.length > 0 && (
-                      <div className="mb-4">
-                        <h4 className="font-medium text-orange-400 mb-2">Key Issues</h4>
-                        <ul className="space-y-1">
-                          {whoisReport.riskAssessment.keyIssues.map((issue: string, index: number) => (
-                            <li key={index} className="flex items-start gap-2 text-sm text-red-300">
-                              <span className="text-red-400 mt-1">⚠️</span>
-                              {issue}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Recommendations */}
-                    {whoisReport.riskAssessment.recommendations.length > 0 && (
-                      <div>
-                        <h4 className="font-medium text-orange-400 mb-2">Recommendations</h4>
-                        <ul className="space-y-1">
-                          {whoisReport.riskAssessment.recommendations.map((rec: string, index: number) => (
-                            <li key={index} className="flex items-start gap-2 text-sm text-blue-300">
-                              <span className="text-blue-400 mt-1">💡</span>
-                              {rec}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <RiskAssessmentSection riskAssessment={whoisReport.riskAssessment} />
               </ExpandableSection>
             )}
 
