@@ -111,13 +111,8 @@ const SocialMediaSection: React.FC<SocialMediaSectionProps> = ({ data, className
                     <span className={`text-xs px-2 py-1 rounded ${
                       profile?.exists ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-400'
                     }`}>
-                      {profile?.exists ? 'Found' : 'Not Found'}
+                      {profile?.exists ? 'Possible Match Found' : 'No Match Found'}
                     </span>
-                    {profile?.verified && (
-                      <span className="text-xs px-2 py-1 rounded bg-blue-900 text-blue-300">
-                        ✓ Verified
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>

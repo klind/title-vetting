@@ -44,7 +44,6 @@ export type RiskCondition =
   | 'limitedPresence'
   | 'inconsistentProfiles'
   | 'credibilityScoreBelow'
-  | 'noVerifiedAccounts'
   | 'suspiciousAccounts'
   | 'botDetected';
 
@@ -221,7 +220,6 @@ export interface RiskEvaluationContext {
   socialMediaData?: {
     platforms?: string[];
     credibilityScore?: number;
-    hasVerifiedAccounts?: boolean;
     suspiciousAccounts?: boolean;
     botDetected?: boolean;
     presenceScore?: number;

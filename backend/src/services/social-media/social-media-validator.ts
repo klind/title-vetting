@@ -101,7 +101,6 @@ export class SocialMediaValidator {
         profiles.push({
           platform: platforms[index],
           exists: false,
-          verified: false,
           error: errorMessage
         });
       }
@@ -126,7 +125,6 @@ export class SocialMediaValidator {
       botDetectionMessages: botDetectionMessages.length > 0 ? botDetectionMessages : undefined,
       // Additional risk-related fields
       platforms: profiles.filter(p => p.exists).map(p => p.platform),
-      verifiedAccounts: profiles.filter(p => p.exists && p.verified),
       suspiciousAccounts: profiles.filter(p => p.exists && p.suspicious),
       botDetected: botDetectionMessages.length > 0,
       presenceScore: totalProfiles * 25 // 25 points per platform for presence scoring
@@ -337,8 +335,7 @@ export class SocialMediaValidator {
               return {
                 platform: 'linkedin',
                 urls: validUrls,
-                exists: true,
-                verified: false // Cannot verify without LinkedIn authentication
+                exists: true
               };
             }
           }
@@ -364,8 +361,7 @@ export class SocialMediaValidator {
     
     return {
       platform: 'linkedin',
-      exists: false,
-      verified: false
+      exists: false
     };
   }
 
@@ -736,8 +732,7 @@ export class SocialMediaValidator {
               return {
                 platform: 'facebook',
                 urls: validUrls,
-                exists: true,
-                verified: false
+                exists: true
               };
             }
           }
@@ -763,7 +758,7 @@ export class SocialMediaValidator {
       }
     }
     
-    return { platform: 'facebook', exists: false, verified: false };
+    return { platform: 'facebook', exists: false };
   }
 
   static async checkTwitter(searchTerms: string[], options: any) {
@@ -893,8 +888,7 @@ export class SocialMediaValidator {
               return {
                 platform: 'x',
                 urls: validUrls,
-                exists: true,
-                verified: false
+                exists: true
               };
             }
           }
@@ -920,7 +914,7 @@ export class SocialMediaValidator {
       }
     }
     
-    return { platform: 'x', exists: false, verified: false };
+    return { platform: 'x', exists: false };
   }
 
   static async checkInstagram(searchTerms: string[], options: any) {
@@ -1050,8 +1044,7 @@ export class SocialMediaValidator {
               return {
                 platform: 'instagram',
                 urls: validUrls,
-                exists: true,
-                verified: false
+                exists: true
               };
             }
           }
@@ -1077,7 +1070,7 @@ export class SocialMediaValidator {
       }
     }
     
-    return { platform: 'instagram', exists: false, verified: false };
+    return { platform: 'instagram', exists: false };
   }
 
   static calculateCredibilityScore(profiles: any[]): number {
@@ -1086,10 +1079,6 @@ export class SocialMediaValidator {
     
     // Base score for having profiles
     score += activeProfiles.length * 15; // 15 points per platform
-    
-    // Bonus for verified profiles
-    const verifiedCount = activeProfiles.filter(p => p.verified).length;
-    score += verifiedCount * 10; // 10 extra points for verified
     
     // Bonus for having multiple platforms (consistency)
     if (activeProfiles.length >= 2) score += 20;

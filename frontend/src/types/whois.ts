@@ -131,7 +131,6 @@ export interface SocialMediaValidation {
     platform: string;
     urls?: string[];
     exists: boolean;
-    verified: boolean;
     followers?: number;
   }>;
   totalProfiles?: number;
