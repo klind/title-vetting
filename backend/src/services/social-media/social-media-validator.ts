@@ -110,7 +110,6 @@ export class SocialMediaValidator {
     const totalProfiles = profiles.filter(p => p.exists).length;
     const hasConsistentPresence = totalProfiles >= 2; // At least 2 platforms
     const credibilityScore = this.calculateCredibilityScore(profiles);
-    const vettingAssessment = this.generateVettingAssessment(profiles, totalProfiles, botDetectionMessages);
 
     // Summary logging
     if (botDetectionMessages.length > 0) {
@@ -124,7 +123,6 @@ export class SocialMediaValidator {
       totalProfiles,
       hasConsistentPresence,
       credibilityScore,
-      vettingAssessment,
       botDetectionMessages: botDetectionMessages.length > 0 ? botDetectionMessages : undefined,
       // Additional risk-related fields
       platforms: profiles.filter(p => p.exists).map(p => p.platform),
@@ -1102,54 +1100,6 @@ export class SocialMediaValidator {
     return Math.min(score, 100);
   }
 
-  static generateVettingAssessment(profiles: any[], totalProfiles: number, botDetectionMessages?: string[]): string[] {
-    const assessments: string[] = [];
-    const existingPlatforms = profiles.filter(p => p.exists).map(p => p.platform);
-    const missingPlatforms = ['linkedin', 'facebook', 'x', 'instagram'].filter(p => !existingPlatforms.includes(p));
-    
-    // If we have bot detection messages, prioritize those over "no presence" assessment
-    if (botDetectionMessages && botDetectionMessages.length > 0) {
-      assessments.push('⚠️ Social media analysis limited due to bot detection - some platforms may be temporarily unavailable');
-      
-      // Still provide some assessment based on what we could check
-      if (totalProfiles > 0) {
-        if (totalProfiles === 1) {
-          assessments.push('⚠️ Limited social media presence detected on accessible platforms');
-        } else if (totalProfiles >= 2) {
-          assessments.push('✅ Multiple platform presence detected on accessible platforms');
-        }
-      }
-      
-      // Risk assessment for bot detection scenario
-      assessments.push('🟡 MEDIUM RISK: Social media verification incomplete due to bot detection');
-    } else {
-      // Normal assessment when no bot detection
-      if (totalProfiles === 0) {
-        assessments.push('⚠️ No social media presence detected - may indicate limited digital footprint or new business');
-      } else {
-        if (totalProfiles === 1) {
-          assessments.push('⚠️ Limited social media presence - only found on one platform');
-        } else if (totalProfiles >= 2) {
-          assessments.push('✅ Multiple platform presence indicates established digital footprint');
-        }
-        
-        if (missingPlatforms.includes('linkedin')) {
-          assessments.push('⚠️ No LinkedIn presence found - uncommon for legitimate businesses');
-        }
-      }
-      
-      // Risk assessment
-      if (totalProfiles === 0) {
-        assessments.push('🔴 HIGH RISK: No social media verification possible');
-      } else if (totalProfiles === 1) {
-        assessments.push('🟡 MEDIUM RISK: Limited social presence');
-      } else if (totalProfiles >= 2) {
-        assessments.push('🟢 LOW RISK: Established social media presence');
-      }
-    }
-    
-    return assessments;
-  }
 
   /**
    * Get a random user agent from the pool

@@ -5,7 +5,9 @@ import { dirname } from 'path';
 import {
   RiskConfiguration,
   RiskAssessmentResult,
+  OptimizedRiskAssessmentResult,
   CategoryRiskAssessment,
+  OptimizedCategoryRiskAssessment,
   RiskFactor,
   RiskLevel,
   RiskEvaluationContext,
@@ -59,7 +61,7 @@ export class RiskScoringService {
   /**
    * Perform comprehensive risk assessment
    */
-  async assessRisk(context: RiskEvaluationContext): Promise<RiskAssessmentResult> {
+  async assessRisk(context: RiskEvaluationContext, verbose: boolean = false): Promise<RiskAssessmentResult | OptimizedRiskAssessmentResult> {
     const config = await this.loadConfiguration();
 
     // Assess each category
@@ -88,15 +90,51 @@ export class RiskScoringService {
     // Determine overall risk level
     const riskLevel = getRiskLevelFromScore(combinedScore, config.scoring.maxScore, config.scoring);
 
+    // Return verbose response if requested
+    if (verbose) {
+      return {
+        overallScore: combinedScore,
+        maxScore: config.scoring.maxScore,
+        riskLevel,
+        whoisAssessment,
+        websiteAssessment,
+        socialMediaAssessment,
+        allFactors,
+        contributingFactors,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    // Return optimized response for production
     return {
       overallScore: combinedScore,
       maxScore: config.scoring.maxScore,
       riskLevel,
-      whoisAssessment,
-      websiteAssessment,
-      socialMediaAssessment,
-      allFactors,
+      whoisAssessment: {
+        category: whoisAssessment.category,
+        score: whoisAssessment.score,
+        maxScore: whoisAssessment.maxScore,
+        riskLevel: whoisAssessment.riskLevel,
+        contributingFactors: whoisAssessment.contributingFactors
+      },
+      websiteAssessment: {
+        category: websiteAssessment.category,
+        score: websiteAssessment.score,
+        maxScore: websiteAssessment.maxScore,
+        riskLevel: websiteAssessment.riskLevel,
+        contributingFactors: websiteAssessment.contributingFactors
+      },
+      socialMediaAssessment: {
+        category: socialMediaAssessment.category,
+        score: socialMediaAssessment.score,
+        maxScore: socialMediaAssessment.maxScore,
+        riskLevel: socialMediaAssessment.riskLevel,
+        contributingFactors: socialMediaAssessment.contributingFactors
+      },
       contributingFactors,
+      riskSummary: this.generateRiskSummary(riskLevel, combinedScore, contributingFactors),
+      keyIssues: this.generateKeyIssues(contributingFactors),
+      recommendations: this.getRecommendations({ overallScore: combinedScore, riskLevel, contributingFactors } as any),
       timestamp: new Date().toISOString()
     };
   }
@@ -395,6 +433,39 @@ export class RiskScoringService {
   }
 
   /**
+   * Generate risk summary based on score and level
+   */
+  private generateRiskSummary(level: RiskLevel, score: number, contributingFactors: RiskFactor[]): string {
+    const factorCount = contributingFactors.length;
+    
+    switch (level) {
+      case RiskLevel.LOW:
+        return factorCount === 0 
+          ? 'No significant risk factors identified. Domain appears legitimate.'
+          : `Low risk with ${factorCount} minor concern${factorCount > 1 ? 's' : ''} identified.`;
+      case RiskLevel.MEDIUM:
+        return `Medium risk with ${factorCount} concern${factorCount > 1 ? 's' : ''} identified. Additional verification recommended.`;
+      case RiskLevel.HIGH:
+        return `High risk with ${factorCount} significant concern${factorCount > 1 ? 's' : ''} identified. Thorough review required.`;
+      case RiskLevel.CRITICAL:
+        return `Critical risk with ${factorCount} major concern${factorCount > 1 ? 's' : ''} identified. Proceed with extreme caution.`;
+      default:
+        return 'Unable to determine risk level.';
+    }
+  }
+
+  /**
+   * Generate key issues from contributing factors
+   */
+  private generateKeyIssues(contributingFactors: RiskFactor[]): string[] {
+    // Sort by score (highest first) and take top 5
+    return contributingFactors
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5)
+      .map(factor => factor.description);
+  }
+
+  /**
    * Get risk level description
    */
   getRiskLevelDescription(level: RiskLevel): string {
@@ -457,10 +528,10 @@ export class RiskScoringService {
 export const riskScoringService = new RiskScoringService();
 
 /**
- * Convenience function to assess risk
+ * Convenience function to assess risk (optimized by default)
  */
-export async function assessRisk(context: RiskEvaluationContext): Promise<RiskAssessmentResult> {
-  return riskScoringService.assessRisk(context);
+export async function assessRisk(context: RiskEvaluationContext, verbose: boolean = false): Promise<RiskAssessmentResult | OptimizedRiskAssessmentResult> {
+  return riskScoringService.assessRisk(context, verbose);
 }
 
 /**

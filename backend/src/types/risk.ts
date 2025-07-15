@@ -135,6 +135,17 @@ export interface CategoryRiskAssessment {
 }
 
 /**
+ * Optimized category risk assessment for production API responses
+ */
+export interface OptimizedCategoryRiskAssessment {
+  category: 'whois' | 'website' | 'socialMedia';
+  score: number;
+  maxScore: number;
+  riskLevel: RiskLevel;
+  contributingFactors: RiskFactor[];
+}
+
+/**
  * Combined risk assessment result
  */
 export interface RiskAssessmentResult {
@@ -146,6 +157,23 @@ export interface RiskAssessmentResult {
   socialMediaAssessment: CategoryRiskAssessment;
   allFactors: RiskFactor[];
   contributingFactors: RiskFactor[];
+  timestamp: string;
+}
+
+/**
+ * Optimized risk assessment result for production API responses
+ */
+export interface OptimizedRiskAssessmentResult {
+  overallScore: number;
+  maxScore: number;
+  riskLevel: RiskLevel;
+  whoisAssessment: OptimizedCategoryRiskAssessment;
+  websiteAssessment: OptimizedCategoryRiskAssessment;
+  socialMediaAssessment: OptimizedCategoryRiskAssessment;
+  contributingFactors: RiskFactor[];
+  riskSummary: string;
+  keyIssues: string[];
+  recommendations: string[];
   timestamp: string;
 }
 
