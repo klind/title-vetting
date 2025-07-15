@@ -1,66 +1,17 @@
-import type { WhoisReport as WhoisReportType, RiskAssessment } from '../types/whois';
-import { RiskLevel } from '../types/whois';
+import type { WhoisReport as WhoisReportType, OptimizedRiskAssessmentResult } from '../types/whois';
+import { RiskAssessmentSection } from './RiskAssessmentSection';
 
 interface WhoisReportProps {
   report: WhoisReportType;
-  riskAssessment?: RiskAssessment;
   className?: string;
   onNewLookup?: () => void;
 }
 
 export function WhoisReport({ 
   report, 
-  riskAssessment, 
   className = '',
   onNewLookup 
 }: WhoisReportProps) {
-  
-  /**
-   * Gets the risk level color classes
-   */
-  const getRiskLevelClasses = (level: RiskLevel): string => {
-    switch (level) {
-      case RiskLevel.LOW:
-        return 'bg-green-100 text-green-800 border-green-200';
-      case RiskLevel.MEDIUM:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case RiskLevel.HIGH:
-        return 'bg-red-100 text-red-800 border-red-200';
-      case RiskLevel.CRITICAL:
-        return 'bg-red-200 text-red-900 border-red-300';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  /**
-   * Gets the risk level icon
-   */
-  const getRiskLevelIcon = (level: RiskLevel) => {
-    switch (level) {
-      case RiskLevel.LOW:
-        return (
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-          </svg>
-        );
-      case RiskLevel.MEDIUM:
-        return (
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-          </svg>
-        );
-      case RiskLevel.HIGH:
-      case RiskLevel.CRITICAL:
-        return (
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-          </svg>
-        );
-      default:
-        return null;
-    }
-  };
 
   /**
    * Calculates days until expiration
@@ -194,52 +145,11 @@ export function WhoisReport({
 
       <div className="p-6 space-y-6">
         {/* Risk Assessment */}
-        {riskAssessment && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Risk Assessment</h3>
-            
-            <div className={`p-4 rounded-lg border ${getRiskLevelClasses(riskAssessment.level)}`}>
-              <div className="flex items-center gap-3">
-                {getRiskLevelIcon(riskAssessment.level)}
-                <div>
-                  <div className="font-semibold text-sm uppercase tracking-wide">
-                    {riskAssessment.level} Risk
-                  </div>
-                  <div className="text-sm opacity-90">
-                    Risk Score: {riskAssessment.score}/100
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {riskAssessment.factors.length > 0 && (
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Risk Factors</h4>
-                <ul className="space-y-1">
-                  {riskAssessment.factors.map((factor, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
-                      <span className="w-1.5 h-1.5 bg-warning-500 rounded-full mt-2 flex-shrink-0" />
-                      {factor}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {riskAssessment.recommendations.length > 0 && (
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Recommendations</h4>
-                <ul className="space-y-1">
-                  {riskAssessment.recommendations.map((recommendation, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
-                      <span className="w-1.5 h-1.5 bg-primary-500 rounded-full mt-2 flex-shrink-0" />
-                      {recommendation}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
+        {report.riskAssessment && (
+          <RiskAssessmentSection 
+            riskAssessment={report.riskAssessment} 
+            className="pb-6 border-b border-gray-200" 
+          />
         )}
 
         {/* Domain Information */}

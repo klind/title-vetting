@@ -94,9 +94,20 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
   }, []);
 
   /**
-   * Calculates risk assessment from WHOIS report
+   * Extracts risk assessment from WHOIS report (now handled by backend)
    */
   const getRiskAssessment = useCallback((report: WhoisReport): RiskAssessment => {
+    // Use the backend's risk assessment if available
+    if (report.riskAssessment) {
+      return {
+        level: report.riskAssessment.riskLevel,
+        score: report.riskAssessment.overallScore,
+        factors: report.riskAssessment.keyIssues,
+        recommendations: report.riskAssessment.recommendations,
+      };
+    }
+
+    // Fallback to legacy assessment if backend data is not available
     let score = 0;
     const factors: string[] = [];
     const recommendations: string[] = [];
@@ -142,10 +153,6 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
       factors.push('No public contact information available');
       recommendations.push('Look for alternative contact methods on the website');
     }
-
-    // Add existing risk factors from backend
-    factors.push(...report.riskFactors);
-    score += report.riskFactors.length * 5;
 
     // Determine risk level
     let level: RiskLevel;
@@ -238,7 +245,7 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
 
       // Make the API request
       const request: WhoisRequest = { url: url.trim() };
-      const response = await apiClient.post<WhoisReport>('/combined', request);
+      const response = await apiClient.post<any>('/combined', request);
 
       if (!response.success || !response.data) {
         throw new Error(response.error || 'Failed to retrieve WHOIS data');
@@ -247,15 +254,79 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
       updateProgress(75, 'Processing results...');
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      // Calculate risk assessment
-      const riskAssessment = getRiskAssessment(response.data);
+      // Transform the backend response to match frontend expectations
+      const transformedData: WhoisReport = {
+        domain: response.data.data.whois.domain,
+        registryDomainId: response.data.data.whois.parsedData['Registry Domain ID'],
+        registrant: {
+          name: response.data.data.whois.parsedData['Registrant Name'],
+          organization: response.data.data.whois.parsedData['Registrant Organization'],
+          email: response.data.data.whois.parsedData['Registrant Email'],
+          phone: response.data.data.whois.parsedData['Registrant Phone'],
+          street: response.data.data.whois.parsedData['Registrant Street'],
+          city: response.data.data.whois.parsedData['Registrant City'],
+          state: response.data.data.whois.parsedData['Registrant State/Province'],
+          postalCode: response.data.data.whois.parsedData['Registrant Postal Code'],
+          country: response.data.data.whois.parsedData['Registrant Country'],
+        },
+        admin: {
+          name: response.data.data.whois.parsedData['Admin Name'],
+          organization: response.data.data.whois.parsedData['Admin Organization'],
+          email: response.data.data.whois.parsedData['Admin Email'],
+          phone: response.data.data.whois.parsedData['Admin Phone'],
+          street: response.data.data.whois.parsedData['Admin Street'],
+          city: response.data.data.whois.parsedData['Admin City'],
+          state: response.data.data.whois.parsedData['Admin State/Province'],
+          postalCode: response.data.data.whois.parsedData['Admin Postal Code'],
+          country: response.data.data.whois.parsedData['Admin Country'],
+        },
+        tech: {
+          name: response.data.data.whois.parsedData['Tech Name'],
+          organization: response.data.data.whois.parsedData['Tech Organization'],
+          email: response.data.data.whois.parsedData['Tech Email'],
+          phone: response.data.data.whois.parsedData['Tech Phone'],
+          street: response.data.data.whois.parsedData['Tech Street'],
+          city: response.data.data.whois.parsedData['Tech City'],
+          state: response.data.data.whois.parsedData['Tech State/Province'],
+          postalCode: response.data.data.whois.parsedData['Tech Postal Code'],
+          country: response.data.data.whois.parsedData['Tech Country'],
+        },
+        registration: {
+          createdDate: response.data.data.whois.parsedData['Creation Date'],
+          expirationDate: response.data.data.whois.parsedData['Registrar Registration Expiration Date'],
+          updatedDate: response.data.data.whois.parsedData['Updated Date'],
+          registrar: response.data.data.whois.parsedData['Registrar'],
+          registrarWhoisServer: response.data.data.whois.parsedData['Registrar WHOIS Server'],
+          registrarUrl: response.data.data.whois.parsedData['Registrar URL'],
+          registrarIanaId: response.data.data.whois.parsedData['Registrar IANA ID'],
+          registrarAbuseContactEmail: response.data.data.whois.parsedData['Registrar Abuse Contact Email'],
+          registrarAbuseContactPhone: response.data.data.whois.parsedData['Registrar Abuse Contact Phone'],
+        },
+        technical: {
+          nameServers: response.data.data.whois.parsedData['Name Server'] ? [response.data.data.whois.parsedData['Name Server']] : [],
+          status: response.data.data.whois.parsedData['Domain Status'],
+          dnssec: response.data.data.whois.parsedData['DNSSEC'],
+        },
+        website: response.data.data.website,
+        riskAssessment: response.data.riskAssessment, // This is the key fix!
+        rawWhoisData: response.data.data.whois.rawData,
+        riskFactors: [], // Legacy field, now empty
+        metadata: {
+          lookupTime: response.data.data.whois.metadata.lookupTime,
+          source: response.data.data.whois.metadata.source,
+          timestamp: response.data.data.whois.metadata.timestamp,
+        },
+      };
+
+      // Calculate risk assessment for backward compatibility
+      const riskAssessment = getRiskAssessment(transformedData);
 
       updateProgress(100, 'Complete');
       setState(prev => ({
         ...prev,
         loading: false,
         error: null,
-        data: response.data!,
+        data: transformedData,
         status: ProcessingStatus.COMPLETED,
         progress: 100,
         currentStep: 'Lookup completed successfully',

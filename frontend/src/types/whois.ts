@@ -82,7 +82,9 @@ export interface WhoisReport {
   
   // Additional validation results
   website?: any; // WebsiteValidationResult from backend
-  riskFactors: string[];
+  
+  // Risk assessment results
+  riskAssessment?: OptimizedRiskAssessmentResult;
   
   // Raw WHOIS data for reference
   rawWhoisData?: any;
@@ -229,7 +231,48 @@ export const RiskLevel = {
 } as const;
 
 /**
- * Risk assessment for display purposes
+ * Risk factor with detailed information
+ */
+export interface RiskFactor {
+  id: string;
+  category: string;
+  condition: string;
+  score: number;
+  description: string;
+  triggered: boolean;
+  value?: number | string | boolean;
+}
+
+/**
+ * Optimized category risk assessment for production UI
+ */
+export interface OptimizedCategoryRiskAssessment {
+  category: 'whois' | 'website' | 'socialMedia';
+  score: number;
+  maxScore: number;
+  riskLevel: RiskLevel;
+  contributingFactors: RiskFactor[];
+}
+
+/**
+ * Optimized risk assessment result for production UI
+ */
+export interface OptimizedRiskAssessmentResult {
+  overallScore: number;
+  maxScore: number;
+  riskLevel: RiskLevel;
+  whoisAssessment: OptimizedCategoryRiskAssessment;
+  websiteAssessment: OptimizedCategoryRiskAssessment;
+  socialMediaAssessment: OptimizedCategoryRiskAssessment;
+  contributingFactors: RiskFactor[];
+  riskSummary: string;
+  keyIssues: string[];
+  recommendations: string[];
+  timestamp: string;
+}
+
+/**
+ * Legacy risk assessment for display purposes (backward compatibility)
  */
 export interface RiskAssessment {
   level: RiskLevel;
