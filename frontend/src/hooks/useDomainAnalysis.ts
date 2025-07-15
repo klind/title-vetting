@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import type { 
   WhoisReport, 
   DomainAnalysisRequest, 
-  WhoisLookupState, 
+  DomainAnalysisState, 
   RiskAssessment,
   AppError,
   ValidationError,
@@ -12,9 +12,9 @@ import { ProcessingStatus, RiskLevel } from '../types/whois';
 import { apiClient, formatApiError, isOnline } from '../utils/api';
 
 /**
- * Initial state for WHOIS lookup
+ * Initial state for domain analysis
  */
-const initialState: WhoisLookupState = {
+const initialState: DomainAnalysisState = {
   loading: false,
   error: null,
   data: null,
@@ -26,19 +26,22 @@ const initialState: WhoisLookupState = {
 };
 
 /**
- * Custom hook for WHOIS domain lookups with comprehensive state management
+ * Custom hook for comprehensive domain analysis with state management
+ * Performs WHOIS lookup, website validation, social media verification, and risk assessment
  */
-export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
-  state: WhoisLookupState;
+export function useDomainAnalysis(): UseApiHookReturn<WhoisReport> & {
+  state: DomainAnalysisState;
   lookupDomain: (url: string) => Promise<void>;
   validateUrl: (url: string) => ValidationError[];
   getRiskAssessment: (report: WhoisReport) => RiskAssessment;
   progress: number;
   status: ProcessingStatus;
 } {
-  const [state, setState] = useState<WhoisLookupState>(initialState);
+  const [state, setState] = useState<DomainAnalysisState>(initialState);
   const abortControllerRef = useRef<AbortController | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef<number | null>(null);
 
   /**
    * Validates URL format and returns validation errors
@@ -184,13 +187,14 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
   const updateProgress = useCallback((progress: number, step: string) => {
     setState(prev => ({
       ...prev,
-      progress,
+      progress: Math.round(progress),
       currentStep: step,
     }));
   }, []);
 
   /**
-   * Performs WHOIS lookup for the given URL
+   * Performs comprehensive domain analysis for the given URL
+   * Includes WHOIS lookup, website validation, social media verification, and risk assessment
    */
   const lookupDomain = useCallback(async (url: string): Promise<void> => {
     // Check if online
@@ -216,6 +220,7 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
     }
 
     // Reset state and start lookup
+    startTimeRef.current = Date.now();
     setState(prev => ({
       ...prev,
       loading: true,
@@ -232,27 +237,72 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
     abortControllerRef.current = new AbortController();
 
     try {
-      // Simulate progress updates
-      updateProgress(10, 'Validating URL...');
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Phase 1: Validation
+      updateProgress(10, 'Validating URL format...');
+      await new Promise(resolve => setTimeout(resolve, 200));
 
-      updateProgress(25, 'Connecting to WHOIS service...');
+      // Phase 2: Starting analysis
+      updateProgress(20, 'Initializing domain analysis...');
       setState(prev => ({ ...prev, status: ProcessingStatus.FETCHING }));
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      updateProgress(50, 'Performing WHOIS lookup...');
+      // Phase 3: Make API request with progressive updates
+      updateProgress(30, 'Querying WHOIS servers...');
       setState(prev => ({ ...prev, status: ProcessingStatus.PROCESSING }));
 
-      // Make the API request
+      // Start the API request and simulate backend progress
       const request: DomainAnalysisRequest = { url: url.trim() };
-      const response = await apiClient.post<any>('/combined', request);
+      
+      // Create progress simulation during API call
+      let progressStepCounter = 0;
+      progressIntervalRef.current = setInterval(() => {
+        setState(prev => {
+          progressStepCounter++;
+          
+          if (prev.progress && prev.progress < 75) {
+            const increment = Math.random() * 2 + 0.5; // Very slow increment between 0.5-2.5%
+            const newProgress = Math.min(Math.round(prev.progress + increment), 75);
+            
+            // Update step based on progress - simplified to 4 main phases
+            let step = prev.currentStep;
+            if (newProgress >= 30 && newProgress < 50) {
+              step = 'Querying WHOIS registry servers...';
+            } else if (newProgress >= 50 && newProgress < 65) {
+              step = 'Analyzing website and SSL certificates...';
+            } else if (newProgress >= 65 && newProgress < 85) {
+              step = 'Checking social media presence...';
+            } else if (newProgress >= 85) {
+              step = 'Calculating comprehensive risk assessment...';
+            }
+            
+            return {
+              ...prev,
+              progress: newProgress,
+              currentStep: step
+            };
+          }
+          return prev;
+        });
+      }, 1200); // Even slower updates every 1.2 seconds
 
-      if (!response.success || !response.data) {
-        throw new Error(response.error || 'Failed to retrieve WHOIS data');
+      // Make the actual API request with extended timeout for comprehensive analysis
+      const response = await apiClient.post<any>('/combined', request, {
+        timeout: 180000, // 3 minutes for comprehensive analysis (WHOIS servers can be very slow)
+      });
+      
+      // Clear the progress interval
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
       }
 
-      updateProgress(75, 'Processing results...');
-      await new Promise(resolve => setTimeout(resolve, 300));
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to retrieve domain analysis data');
+      }
+
+      // Phase 4: Final processing
+      updateProgress(90, 'Processing and formatting results...');
+      await new Promise(resolve => setTimeout(resolve, 400));
 
       // Transform the backend response to match frontend expectations
       const transformedData: WhoisReport = {
@@ -308,12 +358,17 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
           dnssec: response.data.data.whois.parsedData['DNSSEC'],
         },
         website: response.data.data.website,
+        socialMedia: response.data.data.socialMedia,
         riskAssessment: response.data.riskAssessment, // This is the key fix!
         rawWhoisData: response.data.data.whois.rawData,
         metadata: {
           lookupTime: response.data.data.whois.metadata.lookupTime,
           source: response.data.data.whois.metadata.source,
           timestamp: response.data.data.whois.metadata.timestamp,
+          serversQueried: response.data.data.whois.metadata.serversQueried || [],
+          errors: response.data.data.whois.metadata.errors || [],
+          warnings: response.data.data.whois.metadata.warnings || [],
+          totalFields: response.data.data.whois.metadata.totalFields || 0,
         },
       };
 
@@ -328,15 +383,26 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
         data: transformedData,
         status: ProcessingStatus.COMPLETED,
         progress: 100,
-        currentStep: 'Lookup completed successfully',
+        currentStep: 'Analysis completed successfully',
         riskAssessment,
       }));
 
     } catch (error) {
-      console.error('WHOIS lookup failed:', error);
+      console.error('Domain analysis failed:', error);
+      
+      // Clear the progress interval if it's still running
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
       
       const appError = error as AppError;
-      const errorMessage = formatApiError(appError);
+      let errorMessage = formatApiError(appError);
+      
+      // Add helpful context for timeout errors
+      if (appError.type === 'TIMEOUT_ERROR') {
+        errorMessage += ' You can try again with a simpler domain or check back later.';
+      }
 
       setState(prev => ({
         ...prev,
@@ -344,7 +410,7 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
         error: errorMessage,
         data: null,
         status: ProcessingStatus.FAILED,
-        currentStep: 'Lookup failed',
+        currentStep: 'Analysis failed',
       }));
     } finally {
       abortControllerRef.current = null;
@@ -352,7 +418,7 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
   }, [validateUrl, getRiskAssessment, updateProgress]);
 
   /**
-   * Executes the WHOIS lookup (alias for compatibility)
+   * Executes the domain analysis (alias for compatibility)
    */
   const execute = useCallback(async (params?: { url: string }): Promise<void> => {
     if (!params?.url) {
@@ -362,7 +428,7 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
   }, [lookupDomain]);
 
   /**
-   * Resets the lookup state
+   * Resets the analysis state
    */
   const reset = useCallback(() => {
     // Abort any pending request
@@ -377,11 +443,20 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
       timeoutRef.current = null;
     }
 
+    // Clear progress interval
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+
+    // Reset start time
+    startTimeRef.current = null;
+
     setState(initialState);
   }, []);
 
   /**
-   * Aborts the current lookup
+   * Aborts the current analysis
    */
   const abort = useCallback(() => {
     if (abortControllerRef.current) {
@@ -389,10 +464,16 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
       abortControllerRef.current = null;
     }
 
+    // Clear progress interval
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+
     setState(prev => ({
       ...prev,
       loading: false,
-      error: 'Lookup was cancelled',
+      error: 'Analysis was cancelled',
       status: ProcessingStatus.FAILED,
       currentStep: 'Cancelled',
     }));
@@ -409,6 +490,9 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
     };
   }, []);
 
@@ -421,7 +505,7 @@ export function useWhoisLookup(): UseApiHookReturn<WhoisReport> & {
     reset,
     abort,
 
-    // Extended interface for WHOIS lookup
+    // Extended interface for domain analysis
     state,
     lookupDomain,
     validateUrl,

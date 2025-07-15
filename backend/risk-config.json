@@ -131,11 +131,10 @@
         { "condition": "credibilityScoreBelow", "value": 70, "score": 15, "description": "Moderate social media credibility score" }
       ]
     },
-    "verification": {
+    "activity": {
       "enabled": true,
-      "description": "Social media verification risk assessment",
+      "description": "Social media activity risk assessment",
       "rules": [
-        { "condition": "noVerifiedAccounts", "score": 20, "description": "No verified social media accounts" },
         { "condition": "suspiciousAccounts", "score": 30, "description": "Suspicious social media accounts detected" },
         { "condition": "botDetected", "score": 40, "description": "Bot-like behavior detected on social media" }
       ]

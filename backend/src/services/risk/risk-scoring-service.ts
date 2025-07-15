@@ -355,9 +355,6 @@ export class RiskScoringService {
       case 'credibilityScoreBelow':
         return (socialMediaData?.credibilityScore || 0) < (value || 0);
       
-      case 'noVerifiedAccounts':
-        return !socialMediaData?.hasVerifiedAccounts;
-      
       case 'suspiciousAccounts':
         return Boolean(socialMediaData?.suspiciousAccounts);
       

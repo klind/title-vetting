@@ -82,9 +82,13 @@ export interface WhoisReport {
   
   // Additional validation results
   website?: any; // WebsiteValidationResult from backend
+  socialMedia?: any; // SocialMediaValidationResult from backend
   
   // Risk assessment results
   riskAssessment?: OptimizedRiskAssessmentResult;
+  
+  // Legacy risk factors (for backward compatibility)
+  riskFactors?: string[];
   
   // Raw WHOIS data for reference
   rawWhoisData?: any;
@@ -94,6 +98,10 @@ export interface WhoisReport {
     lookupTime: number;
     source: string;
     timestamp: string;
+    serversQueried: string[];
+    errors: string[];
+    warnings: string[];
+    totalFields: number;
   };
 }
 
@@ -295,9 +303,9 @@ export const ProcessingStatus = {
 } as const;
 
 /**
- * Extended state for the WHOIS lookup process
+ * Extended state for the domain analysis process
  */
-export interface WhoisLookupState extends ApiState<WhoisReport> {
+export interface DomainAnalysisState extends ApiState<WhoisReport> {
   status: ProcessingStatus;
   progress?: number; // 0-100
   currentStep?: string;
@@ -367,7 +375,7 @@ export interface HistoryItem {
  * Application state
  */
 export interface AppState {
-  currentLookup: WhoisLookupState;
+  currentLookup: DomainAnalysisState;
   history: HistoryItem[];
   preferences: UserPreferences;
   isOnline: boolean;

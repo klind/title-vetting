@@ -1,4 +1,5 @@
-import type { WhoisReport as WhoisReportType, OptimizedRiskAssessmentResult } from '../types/whois';
+import type { WhoisReport as WhoisReportType, RiskAssessment } from '../types/whois';
+import { RiskLevel } from '../types/whois';
 import { RiskAssessmentSection } from './RiskAssessmentSection';
 
 interface WhoisReportProps {

@@ -12,9 +12,9 @@ import { ErrorType } from '../types/whois';
  */
 const DEFAULT_CONFIG: ApiConfig = {
   baseUrl: import.meta.env.VITE_API_ENDPOINT || 'http://localhost:3001',
-  timeout: 30000, // 30 seconds
-  retries: 3,
-  retryDelay: 1000, // 1 second
+  timeout: 120000, // 2 minutes for comprehensive analysis
+  retries: 1, // Single retry since each attempt takes very long
+  retryDelay: 3000, // 3 seconds between retries
 };
 
 /**
@@ -453,7 +453,7 @@ export function formatApiError(error: AppError | string): string {
     case ErrorType.NETWORK_ERROR:
       return 'Network connection error. Please check your internet connection.';
     case ErrorType.TIMEOUT_ERROR:
-      return 'Request timed out. Please try again.';
+      return 'Domain analysis timed out after 3 minutes. This can happen with complex domains, slow WHOIS servers, or network issues. Please try again - some domains require multiple attempts.';
     case ErrorType.RATE_LIMIT_ERROR:
       return 'Too many requests. Please wait a moment and try again.';
     case ErrorType.VALIDATION_ERROR:

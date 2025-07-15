@@ -393,7 +393,6 @@ async function transformWhoisData(
       socialMediaData: {
         platforms: (websiteValidation as any).socialMedia?.platforms || [],
         credibilityScore: (websiteValidation as any).socialMedia?.credibilityScore || 0,
-        hasVerifiedAccounts: Boolean((websiteValidation as any).socialMedia?.verifiedAccounts?.length),
         suspiciousAccounts: Boolean((websiteValidation as any).socialMedia?.suspiciousAccounts?.length),
         botDetected: Boolean((websiteValidation as any).socialMedia?.botDetected),
         presenceScore: (websiteValidation as any).socialMedia?.presenceScore || 0

@@ -128,9 +128,6 @@ const SocialMediaSection: React.FC<SocialMediaSectionProps> = ({ data, className
                 
                 {profile?.urls && profile.urls.length > 0 && (
                   <div className="space-y-1">
-                    <span className="text-gray-400 text-xs">
-                      {profile.urls.length === 1 ? 'Possible Match:' : `Possible Matches (${profile.urls.length}):`}
-                    </span>
                     <div className="space-y-1">
                       {profile.urls.map((url, urlIndex) => (
                         <a 

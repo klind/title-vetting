@@ -4,82 +4,85 @@ import LoadingSpinner from './components/LoadingSpinner';
 import WhoisSection from './components/WhoisSection';
 import WebsiteSection from './components/WebsiteSection';
 import SocialMediaSection from './components/SocialMediaSection';
-import { WhoisReport } from './components/WhoisReport';
+import { useDomainAnalysis } from './hooks/useDomainAnalysis';
 import type { CombinedReport, WhoisReport as WhoisReportType } from './types/whois';
 
 const App: React.FC = () => {
   console.log('App component rendering...');
   
   const [url, setUrl] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [reportData, setReportData] = useState<CombinedReport | null>(null);
   const [showRawJsonModal, setShowRawJsonModal] = useState(false);
+  
+  // Use the domain analysis hook instead of manual state management
+  const {
+    loading,
+    error,
+    data: whoisReport,
+    progress,
+    state,
+    lookupDomain,
+    reset
+  } = useDomainAnalysis();
 
-  // Transform CombinedReport to WhoisReportType
-  const transformToWhoisReport = (combinedReport: CombinedReport): WhoisReportType => {
-    const whoisData = combinedReport.data.whois.parsedData;
+  // Transform WhoisReport back to CombinedReport format for compatibility with existing UI
+  const transformToCombinedReport = (whoisReport: WhoisReportType): CombinedReport => {
     return {
-      domain: combinedReport.data.whois.domain,
-      registryDomainId: whoisData['Registry Domain ID'],
-      registrant: {
-        name: whoisData['Registrant Name'],
-        organization: whoisData['Registrant Organization'],
-        email: whoisData['Registrant Email'],
-        phone: whoisData['Registrant Phone'],
-        street: whoisData['Registrant Street'],
-        city: whoisData['Registrant City'],
-        state: whoisData['Registrant State/Province'],
-        postalCode: whoisData['Registrant Postal Code'],
-        country: whoisData['Registrant Country'],
-      },
-      admin: {
-        name: whoisData['Admin Name'],
-        organization: whoisData['Admin Organization'],
-        email: whoisData['Admin Email'],
-        phone: whoisData['Admin Phone'],
-        street: whoisData['Admin Street'],
-        city: whoisData['Admin City'],
-        state: whoisData['Admin State/Province'],
-        postalCode: whoisData['Admin Postal Code'],
-        country: whoisData['Admin Country'],
-      },
-      tech: {
-        name: whoisData['Tech Name'],
-        organization: whoisData['Tech Organization'],
-        email: whoisData['Tech Email'],
-        phone: whoisData['Tech Phone'],
-        street: whoisData['Tech Street'],
-        city: whoisData['Tech City'],
-        state: whoisData['Tech State/Province'],
-        postalCode: whoisData['Tech Postal Code'],
-        country: whoisData['Tech Country'],
-      },
-      registration: {
-        createdDate: whoisData['Creation Date'],
-        expirationDate: whoisData['Registrar Registration Expiration Date'],
-        updatedDate: whoisData['Updated Date'],
-        registrar: whoisData['Registrar'],
-        registrarWhoisServer: whoisData['Registrar WHOIS Server'],
-        registrarUrl: whoisData['Registrar URL'],
-        registrarIanaId: whoisData['Registrar IANA ID'],
-        registrarAbuseContactEmail: whoisData['Registrar Abuse Contact Email'],
-        registrarAbuseContactPhone: whoisData['Registrar Abuse Contact Phone'],
-      },
-      technical: {
-        nameServers: whoisData['Name Server'] ? [whoisData['Name Server']] : [],
-        status: whoisData['Domain Status'],
-        dnssec: whoisData['DNSSEC'],
-      },
-      website: combinedReport.data.website,
-      riskAssessment: (combinedReport as any).riskAssessment, // The risk assessment from the backend
-      rawWhoisData: combinedReport.data.whois.rawData,
-      riskFactors: combinedReport.riskFactors || [],
-      metadata: {
-        lookupTime: combinedReport.data.whois.metadata.lookupTime,
-        source: combinedReport.data.whois.metadata.source,
-        timestamp: combinedReport.data.whois.metadata.timestamp,
-      },
+      data: {
+        whois: {
+          domain: whoisReport.domain,
+          tld: whoisReport.domain.split('.').pop() || '',
+          ianaServer: '',
+          registryServer: null,
+          registrarServer: null,
+          parsedData: {
+            'Registry Domain ID': whoisReport.registryDomainId,
+            'Registrant Name': whoisReport.registrant.name,
+            'Registrant Organization': whoisReport.registrant.organization,
+            'Registrant Email': whoisReport.registrant.email,
+            'Registrant Phone': whoisReport.registrant.phone,
+            'Registrant Street': whoisReport.registrant.street,
+            'Registrant City': whoisReport.registrant.city,
+            'Registrant State/Province': whoisReport.registrant.state,
+            'Registrant Postal Code': whoisReport.registrant.postalCode,
+            'Registrant Country': whoisReport.registrant.country,
+            'Admin Name': whoisReport.admin.name,
+            'Admin Organization': whoisReport.admin.organization,
+            'Admin Email': whoisReport.admin.email,
+            'Admin Phone': whoisReport.admin.phone,
+            'Admin Street': whoisReport.admin.street,
+            'Admin City': whoisReport.admin.city,
+            'Admin State/Province': whoisReport.admin.state,
+            'Admin Postal Code': whoisReport.admin.postalCode,
+            'Admin Country': whoisReport.admin.country,
+            'Tech Name': whoisReport.tech.name,
+            'Tech Organization': whoisReport.tech.organization,
+            'Tech Email': whoisReport.tech.email,
+            'Tech Phone': whoisReport.tech.phone,
+            'Tech Street': whoisReport.tech.street,
+            'Tech City': whoisReport.tech.city,
+            'Tech State/Province': whoisReport.tech.state,
+            'Tech Postal Code': whoisReport.tech.postalCode,
+            'Tech Country': whoisReport.tech.country,
+            'Creation Date': whoisReport.registration.createdDate,
+            'Registrar Registration Expiration Date': whoisReport.registration.expirationDate,
+            'Updated Date': whoisReport.registration.updatedDate,
+            'Registrar': whoisReport.registration.registrar,
+            'Registrar WHOIS Server': whoisReport.registration.registrarWhoisServer,
+            'Registrar URL': whoisReport.registration.registrarUrl,
+            'Registrar IANA ID': whoisReport.registration.registrarIanaId,
+            'Registrar Abuse Contact Email': whoisReport.registration.registrarAbuseContactEmail,
+            'Registrar Abuse Contact Phone': whoisReport.registration.registrarAbuseContactPhone,
+            'Name Server': whoisReport.technical.nameServers?.[0],
+            'Domain Status': whoisReport.technical.status,
+            'DNSSEC': whoisReport.technical.dnssec,
+                     },
+           rawData: whoisReport.rawWhoisData,
+           metadata: whoisReport.metadata,
+         },
+         website: whoisReport.website,
+         socialMedia: whoisReport.socialMedia,
+       },
+      riskFactors: [], // Legacy field, now handled by riskAssessment
     };
   };
 
@@ -88,10 +91,6 @@ const App: React.FC = () => {
     console.log('Form submitted with URL:', url);
     if (!url.trim()) return;
 
-    setLoading(true);
-    setError(null);
-    setReportData(null);
-
     try {
       // Add protocol if missing
       let fullUrl = url.trim();
@@ -99,44 +98,16 @@ const App: React.FC = () => {
         fullUrl = `https://${fullUrl}`;
       }
 
-      console.log('Making API call to:', fullUrl);
-      const apiBaseUrl = import.meta.env.VITE_API_ENDPOINT || 'http://localhost:3001';
-      const response = await fetch(`${apiBaseUrl}/combined`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: fullUrl }),
-      });
-
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Response error:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
-      }
-
-      const data = await response.json();
-      console.log('Received data:', data);
-      
-      // Check if the response has the expected structure
-      if (data.success === false) {
-        throw new Error(data.error || 'API returned error');
-      }
-      
-      // Extract the actual data from the response
-      const combinedReport = data.data || data;
-      console.log('Processed combined report:', combinedReport);
-      setReportData(combinedReport);
+      console.log('Starting domain analysis for:', fullUrl);
+      await lookupDomain(fullUrl);
     } catch (err) {
-      console.error('API error:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
+      console.error('Domain analysis failed:', err);
+      // Error is already handled by the hook
     }
   };
+
+  // Get the report data for display
+  const reportData = whoisReport ? transformToCombinedReport(whoisReport) : null;
 
   // Expandable Section Component
   const ExpandableSection: React.FC<{
@@ -227,16 +198,33 @@ const App: React.FC = () => {
               disabled={loading}
               placeholder="Enter domain or URL (e.g., pattentitle.com)"
             />
+            
+            {/* Progress Bar */}
+            {loading && (
+              <div className="bg-gray-800 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-300">{state.currentStep}</span>
+                  <span className="text-sm text-gray-300">{progress}%</span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div 
+                    className="bg-gradient-to-r from-orange-500 to-red-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
+            
             <button
               type="submit"
               disabled={loading || !url.trim()}
               className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:hover:scale-100"
             >
               {loading ? (
-                                 <div className="flex items-center justify-center">
-                   <LoadingSpinner />
-                   <span className="ml-2">Analyzing Domain...</span>
-                 </div>
+                <div className="flex items-center justify-center">
+                  <LoadingSpinner />
+                  <span className="ml-2">Analyzing Domain...</span>
+                </div>
               ) : (
                 'Analyze Domain'
               )}
@@ -247,9 +235,17 @@ const App: React.FC = () => {
         {/* Error Display */}
         {error && (
           <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 mb-6 max-w-4xl mx-auto">
-            <div className="flex items-center">
-              <div className="text-red-400 font-semibold">Error:</div>
-              <div className="ml-2 text-red-300">{error}</div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="text-red-400 font-semibold">Error:</div>
+                <div className="ml-2 text-red-300">{error}</div>
+              </div>
+              <button
+                onClick={reset}
+                className="text-red-400 hover:text-red-300 text-sm underline"
+              >
+                Clear
+              </button>
             </div>
           </div>
         )}
@@ -258,55 +254,55 @@ const App: React.FC = () => {
         {reportData && (
           <div className="max-w-6xl mx-auto space-y-6">
             {/* Risk Assessment Section */}
-            {(reportData as any).riskAssessment && (
+            {whoisReport?.riskAssessment && (
               <ExpandableSection title="Risk Assessment" defaultOpen>
                 <div className="bg-gray-800 rounded-lg p-6">
                   <div className="text-white">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-xl font-semibold">Risk Assessment</h3>
                       <div className="text-xs text-gray-400">
-                        {new Date((reportData as any).riskAssessment.timestamp).toLocaleString()}
+                        {new Date(whoisReport.riskAssessment.timestamp).toLocaleString()}
                       </div>
                     </div>
                     
                     {/* Overall Risk Score */}
                     <div className={`p-4 rounded-lg border-2 mb-6 ${
-                      (reportData as any).riskAssessment.riskLevel === 'low' ? 'bg-green-100 text-green-800 border-green-200' :
-                      (reportData as any).riskAssessment.riskLevel === 'medium' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                      (reportData as any).riskAssessment.riskLevel === 'high' ? 'bg-red-100 text-red-800 border-red-200' :
+                      whoisReport.riskAssessment.riskLevel === 'low' ? 'bg-green-100 text-green-800 border-green-200' :
+                      whoisReport.riskAssessment.riskLevel === 'medium' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                      whoisReport.riskAssessment.riskLevel === 'high' ? 'bg-red-100 text-red-800 border-red-200' :
                       'bg-red-200 text-red-900 border-red-300'
                     }`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div>
                             <div className="font-bold text-lg uppercase tracking-wide">
-                              {(reportData as any).riskAssessment.riskLevel} Risk
+                              {whoisReport.riskAssessment.riskLevel} Risk
                             </div>
                             <div className="text-sm opacity-90">
-                              Overall Score: {(reportData as any).riskAssessment.overallScore}/{(reportData as any).riskAssessment.maxScore}
+                              Overall Score: {whoisReport.riskAssessment.overallScore}/{whoisReport.riskAssessment.maxScore}
                             </div>
                           </div>
                         </div>
                         <div className="text-right">
                           <div className="text-2xl font-bold">
-                            {(reportData as any).riskAssessment.overallScore}
+                            {whoisReport.riskAssessment.overallScore}
                           </div>
                           <div className="text-sm opacity-90">
-                            /{(reportData as any).riskAssessment.maxScore}
+                            /{whoisReport.riskAssessment.maxScore}
                           </div>
                         </div>
                       </div>
                       <div className="mt-2 text-sm opacity-90">
-                        {(reportData as any).riskAssessment.riskSummary}
+                        {whoisReport.riskAssessment.riskSummary}
                       </div>
                     </div>
 
                     {/* Key Issues */}
-                    {(reportData as any).riskAssessment.keyIssues.length > 0 && (
+                    {whoisReport.riskAssessment.keyIssues.length > 0 && (
                       <div className="mb-4">
                         <h4 className="font-medium text-orange-400 mb-2">Key Issues</h4>
                         <ul className="space-y-1">
-                          {(reportData as any).riskAssessment.keyIssues.map((issue: string, index: number) => (
+                          {whoisReport.riskAssessment.keyIssues.map((issue: string, index: number) => (
                             <li key={index} className="flex items-start gap-2 text-sm text-red-300">
                               <span className="text-red-400 mt-1">⚠️</span>
                               {issue}
@@ -317,11 +313,11 @@ const App: React.FC = () => {
                     )}
 
                     {/* Recommendations */}
-                    {(reportData as any).riskAssessment.recommendations.length > 0 && (
+                    {whoisReport.riskAssessment.recommendations.length > 0 && (
                       <div>
                         <h4 className="font-medium text-orange-400 mb-2">Recommendations</h4>
                         <ul className="space-y-1">
-                          {(reportData as any).riskAssessment.recommendations.map((rec: string, index: number) => (
+                          {whoisReport.riskAssessment.recommendations.map((rec: string, index: number) => (
                             <li key={index} className="flex items-start gap-2 text-sm text-blue-300">
                               <span className="text-blue-400 mt-1">💡</span>
                               {rec}
@@ -375,10 +371,6 @@ const App: React.FC = () => {
         {!reportData && !loading && !error && (
           <div className="text-center text-gray-400 max-w-2xl mx-auto">
             <div className="text-6xl mb-4">🔍</div>
-            <p className="text-lg">
-              Enter a domain above to start your comprehensive analysis. 
-              We'll provide detailed WHOIS information, website validation, and social media presence data.
-            </p>
           </div>
         )}
       </div>
